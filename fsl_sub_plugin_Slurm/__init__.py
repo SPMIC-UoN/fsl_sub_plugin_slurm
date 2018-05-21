@@ -467,8 +467,8 @@ def example_conf():
     '''Returns a string containing the example configuration for this
     cluster plugin.'''
 
-    here = os.path.realpath(__file__)
+    here = os.path.realpath(os.path.dirname(__file__))
     with open(os.path.join(here, 'fsl_sub_Slurm.yml')) as e_conf_f:
         e_conf = e_conf_f.readlines()
 
-    return '\n'.join(e_conf)
+    return ''.join(e_conf)
