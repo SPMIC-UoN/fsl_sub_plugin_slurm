@@ -468,7 +468,71 @@ def example_conf():
     cluster plugin.'''
 
     here = os.path.realpath(os.path.dirname(__file__))
-    with open(os.path.join(here, 'fsl_sub_Slurm.yml')) as e_conf_f:
+    with open(os.path.join(here, 'fsl_sub_slurm.yml')) as e_conf_f:
         e_conf = e_conf_f.readlines()
 
     return ''.join(e_conf)
+
+
+def job_status(job_id, sub_job_id=None):
+    '''Return details for the job with given ID.
+
+    details holds a dict with following info:
+        id
+        name
+        script (if available)
+        arguments (if available)
+        # sub_state: fsl_sub.consts.NORMAL|RESTARTED|SUSPENDED
+        submission_time
+        tasks (dict keyed on sub-task ID):
+            status:
+                fsl_sub.consts.QUEUED
+                fsl_sub.consts.RUNNING
+                fsl_sub.consts.FINISHED
+                fsl_sub.consts.FAILEDNQUEUED
+                fsl_sub.consts.HELD
+            start_time
+            end_time
+            sub_time
+            exit_status
+            error_message
+            maxmemory (in Mbytes)
+        parents (if available)
+        children (if available)
+        job_directory (if available)
+
+        '''
+
+    # Look for running jobs
+    if isinstance(job_id, str):
+        if '.' in job_id:
+            if sub_job_id is None:
+                job_id, sub_job_id = job_id.split('.')
+                sub_job_id = int(sub_job_id)
+            else:
+                job_id, _ = job_id.split('.')
+        job_id = int(job_id)
+    if isinstance(sub_job_id, str):
+        sub_job_id = int(sub_job_id)
+
+    try:
+        job_details = _running_job(job_id, sub_job_id)
+        if job_details:
+            return job_details
+        else:
+            job_details = _finished_job(job_id, sub_job_id)
+
+    except UnknownJobId as e:
+        raise
+    except Exception as e:
+        raise GridOutputError from e
+
+    return job_details
+
+
+def _running_job(job_id, sub_job_id):
+    return None
+
+
+def _finished_jon(job_id, sub_job_id):
+    return None

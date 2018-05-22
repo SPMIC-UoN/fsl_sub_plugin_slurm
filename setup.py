@@ -3,12 +3,12 @@ from setuptools import setup, find_packages
 
 
 setup(
-    name='fsl_sub_plugin_Slurm',
+    name='fsl_sub_plugin_slurm',
     version='1.0',
     description='FSL Cluster Submission Plugin for Slurm',
     author='Duncan Mortimer',
     author_email='duncan.mortimer@ndcn.ox.ac.uk',
-    url='https://git.fmrib.ox.ac.uk/fsl/fsl_sub_plugin_Slurm',
+    url='https://git.fmrib.ox.ac.uk/fsl/fsl_sub_plugin_slurm',
     classifiers=[
         'Development Status :: 4 - Beta',
         'Intended Audience :: Science/Research',
@@ -32,7 +32,7 @@ setup(
     install_requires=['fsl_sub', ],
     python_requires='~=3.5',
     package_data={
-        'fsl_sub_plugin_Slurm': ['fsl_sub_Slurm.yml'],
+        'fsl_sub_plugin_slurm': ['fsl_sub_slurm.yml'],
     },
     include_package_data=True,
     )
