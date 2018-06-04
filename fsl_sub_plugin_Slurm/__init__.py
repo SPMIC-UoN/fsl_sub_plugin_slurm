@@ -11,6 +11,7 @@ from fsl_sub.exceptions import (
     BadSubmission,
     BadConfiguration,
     GridOutputError,
+    UnknownJobId,
 )
 from fsl_sub.config import (
     method_config,
@@ -534,5 +535,5 @@ def _running_job(job_id, sub_job_id):
     return None
 
 
-def _finished_jon(job_id, sub_job_id):
+def _finished_job(job_id, sub_job_id):
     return None
