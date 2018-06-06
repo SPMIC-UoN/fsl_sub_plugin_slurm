@@ -1,5 +1,5 @@
 # Job submission method to use. Supported values are 'SGE' and 'NONE'
-method: Slurm
+method: slurm
 # Default units for RAM given
 # (P, T, G, M, K)
 ram_units: G
