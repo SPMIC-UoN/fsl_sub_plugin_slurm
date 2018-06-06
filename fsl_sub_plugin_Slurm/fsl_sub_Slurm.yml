@@ -33,8 +33,7 @@ method_opts:
       - threads
     same_node_pes:
       - threads
-    large_job_split_pe:
-      - threads
+    large_job_split_pe: threads
     # Replicate user's shell environment to running job
     copy_environment: True
     # Method used to bind to CPUs - set to None to disable
