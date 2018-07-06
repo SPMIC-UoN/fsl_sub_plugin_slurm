@@ -25,9 +25,9 @@ setup(
              ' grid slurm grid engine',
     project_urls={
         'Documentation': 'https://fsl.fmrib.ox.ac.uk/fsl/fslwiki',
-        'Source': 'https://git.fmrib.ox.ac.uk/fsl/fsl_sub'
+        'Source': 'https://git.fmrib.ox.ac.uk/fsl/fsl_sub_plugin_slurm'
     },
-    packages=find_packages(exclude=['tests*', ]),
+    packages=find_packages(),
     license='FSL License',
     install_requires=['fsl_sub', ],
     python_requires='~=3.5',

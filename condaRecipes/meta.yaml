@@ -38,5 +38,5 @@ test:
     - {{ package.lower() }}
     {% endfor %}
   commands:
-    - python -m unittest discover
+    - python -m unittest discover fsl_sub_plugin_slurm.tests -p "test_*.py"
 {% endif %}
