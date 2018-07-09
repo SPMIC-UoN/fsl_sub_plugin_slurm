@@ -50,7 +50,7 @@ method_opts:
     # Array holds - Requires Slurm 16.05+
     array_holds: True
     # Array limits
-    array_limits: True
+    array_limit: True
     # Whether to split large memory jobs into shared memory slots
     # If your system is configured with MaxMemPerCPU with accounting
     # then this could be set to False as the system should automatically
