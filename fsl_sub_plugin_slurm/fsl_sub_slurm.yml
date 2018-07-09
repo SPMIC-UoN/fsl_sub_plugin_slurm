@@ -58,6 +58,8 @@ method_opts:
     map_ram: True
     # Whether to divide up RAM requirements for multi-threaded tasks
     thread_ram_divide: True
+    # Whether to enable --usescript option
+    script_conf: True
     # Enable Emailing end-user about job status
     mail_support: True
     # What mail modes are allowed
