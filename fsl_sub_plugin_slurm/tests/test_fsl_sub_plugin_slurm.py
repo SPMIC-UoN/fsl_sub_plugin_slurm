@@ -43,7 +43,7 @@ method_opts:
         min_priority: 10000
         max_priority: 0
         array_holds: True
-        array_limits: True
+        array_limit: True
         architecture: False
 copro_opts:
     cuda:
@@ -1916,7 +1916,7 @@ class TestSubmit(unittest.TestCase):
 #         jid = 12344
 #         qsub_out = 'Your job ' + str(jid) + ' ("test_job") has been submitted'
 #         test_mconf = dict(mconf_dict)
-#         test_mconf['array_limits'] = False
+#         test_mconf['array_limit'] = False
 #         mock_mconf.return_value = test_mconf
 #         expected_cmd = [
 #             '/usr/bin/qsub',
