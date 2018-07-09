@@ -17,7 +17,7 @@ method_opts:
   None:
     # Leave this secton alone
     queues: False
-    large_job_split_pe: []
+    large_job_split_pe: None
     mail_support: False
     map_ram: False
     job_priorities: False
