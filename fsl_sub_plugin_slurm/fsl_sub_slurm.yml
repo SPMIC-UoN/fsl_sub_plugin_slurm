@@ -15,9 +15,8 @@ thread_control:
 
 method_opts:
   None:
+    # Leave this secton alone
     queues: False
-    parallel_envs: []
-    same_node_pes: []
     large_job_split_pe: []
     mail_support: False
     map_ram: False
@@ -26,13 +25,9 @@ method_opts:
     array_limit: False
     architecture: False
     job_resources: False
-  Slurm:
+  slurm:
     queues: True
     # SLURM doesn't use parallel environments - leave these definitions as is
-    parallel_envs:
-      - threads
-    same_node_pes:
-      - threads
     large_job_split_pe: threads
     # Replicate user's shell environment to running job
     copy_environment: True
@@ -193,3 +188,14 @@ queues:
       - shmem
     priority: 1
     group: 2
+    default: True
+  verylong.q:
+    time: 1000000
+    max_size: 500
+    slot_size: 12
+    max_slots: 8
+    map_ram: False
+    parallel_envs:
+      - openmp
+    priority: 1
+    group: 3

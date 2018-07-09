@@ -20,10 +20,6 @@ method_opts:
     slurm:
         queues: True
         large_job_split_pe: threads
-        same_node_pes:
-            - threads
-        parallel_envs:
-            - threads
         copy_environment: True
         affinity_type: linear
         affinity_control: threads
