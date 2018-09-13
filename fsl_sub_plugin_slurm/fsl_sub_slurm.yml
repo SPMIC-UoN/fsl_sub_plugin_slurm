@@ -162,9 +162,6 @@ queues:
     # Should jobs be split over multiple slots when requires more RAM than available
     # in a single slot
     map_ram: true
-    # List of available parallel environments
-    parallel_envs:
-      - shmem
     # Priority of queue, higher numbers win
     priority: 1
     # Group of queue - use this to group together variations of a queue based on
@@ -176,8 +173,6 @@ queues:
     slot_size: 4
     max_slots: 16
     map_ram: true
-    parallel_envs:
-      - shmem
     priority: 1
     group: 1
   long:
@@ -186,8 +181,6 @@ queues:
     slot_size: 16
     max_slots: 24
     map_ram: true
-    parallel_envs:
-      - shmem
     priority: 1
     group: 2
     default: True
@@ -197,7 +190,5 @@ queues:
     slot_size: 12
     max_slots: 8
     map_ram: False
-    parallel_envs:
-      - openmp
     priority: 1
     group: 3
