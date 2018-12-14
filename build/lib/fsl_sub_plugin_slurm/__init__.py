@@ -400,7 +400,9 @@ def submit(
             command_args.append('--requeue')
 
         if project is not None:
-            command_args.append('--account ' + project)
+            command_args.extend(
+                ['--account', project, ]
+            )
 
         if array_task:
             # Submit array task file

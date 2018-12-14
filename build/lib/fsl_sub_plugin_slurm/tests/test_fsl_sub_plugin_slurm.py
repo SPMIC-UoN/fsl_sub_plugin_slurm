@@ -435,16 +435,16 @@ class TestSubmit(unittest.TestCase):
             )
 
     def test_project_submit(
-        self, mock_sprun, mock_cpconf,
+        self, mock_sprun, mock_ntf, mock_cpconf,
         mock_srbs, mock_mconf, mock_qsub,
-        mock_getcwd, mock_readconf):
+        mock_getcwd, mock_check_pe, mock_readconf):
         job_name = 'test_job'
         queue = 'a.q'
         project = 'Aproject'
         cmd = ['acmd', 'arg1', 'arg2', ]
-        logdir = os.getcwd()
+
         jid = 12345
-        qsub_out = str(jid)
+        qsub_out = 'Your job ' + str(jid) + ' ("acmd") has been submitted'
         with self.subTest("No projects"):
             test_dict = dict(mconf_dict)
             test_dict['projects'] = False
