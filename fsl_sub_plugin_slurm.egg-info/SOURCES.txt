@@ -1,9 +1,0 @@
-setup.py
-fsl_sub_plugin_slurm/__init__.py
-fsl_sub_plugin_slurm.egg-info/PKG-INFO
-fsl_sub_plugin_slurm.egg-info/SOURCES.txt
-fsl_sub_plugin_slurm.egg-info/dependency_links.txt
-fsl_sub_plugin_slurm.egg-info/requires.txt
-fsl_sub_plugin_slurm.egg-info/top_level.txt
-fsl_sub_plugin_slurm/tests/__init__.py
-fsl_sub_plugin_slurm/tests/test_fsl_sub_plugin_slurm.py
