@@ -108,12 +108,9 @@ This will give a summary of the nodes available on the queue and provides job li
 
 The settings for the queue can be found in the following partition properties:
 
+* time: _TIMELIMIT_ reports in days-hours:minutes:seconds, this needs converting to seconds (from the _--long_ output)
 * slot_size: This is the maximum permitted memory per thread (cpu/core) converted to units specified in the main configuration for fsl_sub. This is usually reported in MB, so for example 63000 should be configured as 63 if you have configured fsl_sub to expect GB. It is equal to the total memory (_MEMORY_) of a node divided by the number of cores (_CPUS_). Where a partition has nodes of differing memory size specify the largest figure and ensure that you have _notify\_ram\_usage_ turned on so that Slurm can auto-select the node based on your RAM request.
-
 * max_slots: _CPU_ contains the number of CPUs (threads) available on each node. Set this option to the maximum number reported.
-
-* time: _TIMELIMIT_ reports in days-hours:minutes:seconds, this needs converting to seconds
-
 * group: An integer that allows grouping similar queues together, all queues in the same group will be candidates for a job that matches their capabilities
 * priority: An integer that specifies an order for queues within a group, smaller = higher priority.
 * map_ram: Whether to automatically submit large jobs as multiple threads to achieve the memory requested.
