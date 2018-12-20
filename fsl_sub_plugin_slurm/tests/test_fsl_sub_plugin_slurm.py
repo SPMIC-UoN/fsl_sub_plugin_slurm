@@ -21,8 +21,6 @@ method_opts:
         queues: True
         large_job_split_pe: threads
         copy_environment: True
-        affinity_type: linear
-        affinity_control: threads
         mail_support: True
         mail_modes:
             b:

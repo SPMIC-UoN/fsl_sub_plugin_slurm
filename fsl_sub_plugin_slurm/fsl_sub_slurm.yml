@@ -32,9 +32,6 @@ method_opts:
     large_job_split_pe: threads
     # Replicate user's shell environment to running job
     copy_environment: True
-    # Method used to bind to CPUs - Not supported in Slurm plugin
-    affinity_type: None
-    affinity_control: None
     # Array holds supported? - Requires Slurm 16.05+
     array_holds: True
     # Array limits - is limiting the number of concurrent array

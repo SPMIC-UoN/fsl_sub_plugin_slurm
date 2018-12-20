@@ -53,8 +53,6 @@ In the _method\_opts_ section, a definition for the method _slurm_ needs to be e
 * queues: True/False - does this method use queues/partitions (should be True)
 * large_job_split_pe: - not used for slurm so leave as the default
 * copy_environment: True/False - whether to replicate the environment variables in the shell that called fsl_sub into the job's shell
-* affinity_type: None - Not supported
-* affinity_control: None - Not supported
 * script_conf: True/False - whether _--usesscript_ option to fsl_sub is available via this method. This option allows you to define the slurm options as comments in a shell script and then provide this to the cluster for running. Should be set to True.
 * mail_support: True/False - whether the slurm installation is configured to send email on job events.
 * mail_modes: If the grid has email notifications turned on, this option configures the submission options for different verbosity levels, 'b' = job start, 'e' = job end, 'a' = job abort, 'f' = all events, 'n' = no mail. Each event type should then have a list of submission mail arguments that will be applied to the submitted job. Typically, these should not be edited.

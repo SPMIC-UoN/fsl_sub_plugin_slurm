@@ -262,10 +262,6 @@ def submit(
                     )
                 )
 
-        if binding == 'linear':
-            command_args.append('='.join(
-                ('--cpu-bind', mconf['affinity_control'], )))
-
         # Job priorities can only be set by admins
 
         if resources:
