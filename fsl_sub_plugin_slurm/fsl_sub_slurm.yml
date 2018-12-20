@@ -27,28 +27,18 @@ method_opts:
     job_resources: False
     projects: False
   slurm:
-    queues: True
     # SLURM doesn't use parallel environments - leave these definitions as is
+    queues: True
     large_job_split_pe: threads
     # Replicate user's shell environment to running job
     copy_environment: True
-    # Method used to bind to CPUs - set to None to disable
-    # Supported options, linear
-    affinity_type: linear
-    # How to configure this affinity options are:
-    #   threads - set to number of threads required
-    #   cores - set to number of cores required
-    # See --cpu_bind option to sbatch for other options
-    affinity_control: threads
-    # Supports job priority setting?
-    job_priorities: False
-    # Lowest priority
-    min_priority: 10000
-    # Highest (user) priority
-    max_priority: 0
-    # Array holds - Requires Slurm 16.05+
+    # Method used to bind to CPUs - Not supported in Slurm plugin
+    affinity_type: None
+    affinity_control: None
+    # Array holds supported? - Requires Slurm 16.05+
     array_holds: True
-    # Array limits
+    # Array limits - is limiting the number of concurrent array
+    # tasks supported?
     array_limit: True
     # Whether to split large memory jobs into shared memory slots
     # If your system is configured with MaxMemPerCPU with accounting
@@ -56,7 +46,11 @@ method_opts:
     # increase the number of CPUs required to satisfy memory requirements
     map_ram: True
     # Whether to divide up RAM requirements for multi-threaded tasks
-    thread_ram_divide: True
+    # Slurm automatically does this is most cases so this should normally
+    # be false
+    thread_ram_divide: False
+    # Whether to tell Slurm how much RAM has been specified
+    notify_ram_usage: True
     # Whether to enable --usescript option
     script_conf: True
     # Enable Emailing end-user about job status
@@ -93,8 +87,6 @@ coproc_opts:
     resource: gpu
     # Whether there are multiple coprocessor classes/types
     classes: True
-    # Which scheduler resource requests a coprocessor class
-    class_resource: gputype
     # This defines the short code for the types and the resource
     # which will be requested and a documentation string for the help
     # text
@@ -133,8 +125,6 @@ coproc_opts:
     uses_modules: True
     # What is the name of the parent module for this co-processor?
     module_parent: cuda
-    # Should we disable core binding for co-processor tasks?
-    no_binding: True
     # Does the SURLM cluster use constraints to specify GPU types?
     slurm_constraints: True
 # Queue definitions (Partitions in SLURM)

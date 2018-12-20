@@ -207,13 +207,10 @@ def submit(
             command_args.append('='.join(
                 ('--export', 'ALL', )
             ))
-        binding = mconf['affinity_type']
 
         if coprocessor is not None:
             # Setup the coprocessor
             cpconf = coprocessor_config(coprocessor)
-            if cpconf['no_binding']:
-                binding = None
 
             if cpconf['classes']:
                 available_classes = cpconf['class_types']
@@ -261,10 +258,6 @@ def submit(
                             str(coprocessor_multi))
                     )
                 )
-
-        if binding == 'linear':
-            command_args.append('='.join(
-                ('--cpu-bind', mconf['affinity_control'], )))
 
         # Job priorities can only be set by admins
 
@@ -332,27 +325,10 @@ def submit(
                 array_limit_modifier = ""
 
         if jobram:
-            # Minimum memory required per allocated CPU.
-            # Default units are megabytes unless the SchedulerParameters
-            #  configuration parameter includes the "default_gbytes"
-            # option for gigabytes. Default value is DefMemPerCPU and
-            # the maximum value is MaxMemPerCPU (see exception below).
-            # If configured, both parameters can be seen using the
-            # scontrol show config command. Note that if the job's
-            # --mem-per-cpu value exceeds the configured MaxMemPerCPU,
-            # then the user's limit will be treated as a memory limit
-            # per task; --mem-per-cpu will be reduced to a value no
-            # larger than MaxMemPerCPU; --cpus-per-task will be set
-            # and the value of --cpus-per-task multiplied by the new
-            # --mem-per-cpu value will equal the original --mem-per-cpu
-            # value specified by the user. This parameter would
-            # generally be used if individual processors are allocated
-            # to jobs (SelectType=select/cons_res). If resources are
-            # allocated by the core, socket or whole nodes; the number
-            # of CPUs allocated to a job may be higher than the task
-            # count and the value of --mem-per-cpu should be adjusted
-            # accordingly. Also see --mem. --mem and --mem-per-cpu are
-            # mutually exclusive.
+            # Slurm defaults to dividing up the task into multiple cpu
+            # request, automatically reducing memory per cpu value
+            # However, we have already done this, so we need to
+            # reduce the RAM requirements.
 
             if ramsplit:
                 jobram = split_ram_by_slots(jobram, threads)
@@ -367,12 +343,13 @@ def submit(
                             output="M")
             except ValueError:
                 raise BadConfiguration("ram_units not one of P, T, G, M, K")
-            command_args.append(
-                '='.join((
-                    '--mem-per-cpu',
-                    str(int(mem_in_mb))
-                ))
-            )
+            if mconf['notify_ram_usage']:
+                command_args.append(
+                    '='.join((
+                        '--mem-per-cpu',
+                        str(int(mem_in_mb))
+                    ))
+                )
 
         if mconf['mail_support']:
             if mailto:
