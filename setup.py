@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='fsl_sub_plugin_slurm',
-    version='1.1.0',
+    version='1.1.1',
     description='FSL Cluster Submission Plugin for Slurm',
     author='Duncan Mortimer',
     author_email='duncan.mortimer@ndcn.ox.ac.uk',

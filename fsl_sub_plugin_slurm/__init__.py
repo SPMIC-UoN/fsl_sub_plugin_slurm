@@ -27,6 +27,10 @@ from fsl_sub.utils import (
 )
 
 
+def plugin_version():
+    return '1.1.1'
+
+
 def qtest():
     '''Command that confirms method is available'''
     return qconf_cmd()
