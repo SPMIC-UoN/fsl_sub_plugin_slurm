@@ -28,7 +28,7 @@ from fsl_sub.utils import (
 
 
 def plugin_version():
-    return '1.1.1'
+    return '1.1.2'
 
 
 def qtest():

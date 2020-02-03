@@ -1,4 +1,4 @@
-# Job submission method to use. Supported values are 'SGE' and 'NONE'
+# Job submission method to use. Supported values are 'slurm' and 'NONE'
 method: slurm
 # Default units for RAM given
 # (P, T, G, M, K)
@@ -17,7 +17,7 @@ method_opts:
   None:
     # Leave this secton alone
     queues: False
-    large_job_split_pe: None
+    large_job_split_pe: Null
     mail_support: False
     map_ram: False
     job_priorities: False
