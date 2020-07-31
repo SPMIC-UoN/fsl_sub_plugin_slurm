@@ -6,7 +6,7 @@ import unittest
 import yaml
 import fsl_sub_plugin_slurm
 
-from unittest.mock import (patch, mock_open)
+from unittest.mock import (patch, )
 
 import fsl_sub.consts
 from fsl_sub.exceptions import (
@@ -43,6 +43,10 @@ method_opts:
         array_holds: True
         array_limit: True
         architecture: False
+        export_vars: []
+        preserve_modules: True
+        keep_wrapper: False
+        preserve_modules: True
 copro_opts:
     cuda:
         resource: gpu
@@ -104,12 +108,6 @@ class TestSlurmReporting(unittest.TestCase):
         autospec=True
     )
     def test__get_squeue(self, mock_sprun, mock_squeue, mock_sacct):
-        slurm_example_squeue = (
-            '''1716106|acctest|2018-06-05T09:42:24|2018-06-05T09:42:24|'''
-            '''2018-06-05T09:44:08|00:00:00|00:00.004|COMPLETED|0:0|
-1716106.batch|batch|2018-06-05T09:42:24|2018-06-05T09:42:24|'''
-            '''2018-06-05T09:44:08|00:00:00|00:00.004|COMPLETED|0:0|202.15M
-''')
         self.maxDiff = None
         with self.subTest('No sacct'):
             mock_sprun.side_effect = FileNotFoundError
@@ -133,11 +131,11 @@ class TestSlurmReporting(unittest.TestCase):
         mock_sprun.reset_mock()
         with self.subTest('Single job'):
             slurm_example_sacct = (
-            '''1716106|acctest|2018-06-05T09:42:24|2018-06-05T09:42:24|'''
-            '''2018-06-05T09:44:08|00:00:00|00:00.004|COMPLETED|0:0|
-1716106.batch|batch|2018-06-05T09:42:24|2018-06-05T09:42:24|'''
-            '''2018-06-05T09:44:08|00:00:00|00:00.004|COMPLETED|0:0|202.15M
-''')
+                '''1716106|acctest|2018-06-05T09:42:24|2018-06-05T09:42:24|'''
+                '''2018-06-05T09:44:08|00:00:00|00:00.004|COMPLETED|0:0|
+    1716106.batch|batch|2018-06-05T09:42:24|2018-06-05T09:42:24|'''
+                '''2018-06-05T09:44:08|00:00:00|00:00.004|COMPLETED|0:0|202.15M
+    ''')
             mock_sprun.return_value = subprocess.CompletedProcess(
                 '/usr/bin/sacct',
                 stdout=slurm_example_sacct,
@@ -433,9 +431,9 @@ class TestSubmit(unittest.TestCase):
             )
 
     def test_project_submit(
-        self, mock_sprun, mock_cpconf,
-        mock_srbs, mock_mconf, mock_qsub,
-        mock_getcwd, mock_readconf):
+            self, mock_sprun, mock_cpconf,
+            mock_srbs, mock_mconf, mock_qsub,
+            mock_getcwd, mock_readconf):
         job_name = 'test_job'
         queue = 'a.q'
         project = 'Aproject'
@@ -471,7 +469,7 @@ class TestSubmit(unittest.TestCase):
                     command=cmd,
                     job_name=job_name,
                     queue=queue
-                    )
+                )
             )
             mock_sprun.assert_called_once_with(
                 expected_cmd,
@@ -510,7 +508,7 @@ class TestSubmit(unittest.TestCase):
                     job_name=job_name,
                     queue=queue,
                     project='Aproject'
-                    )
+                )
             )
             mock_sprun.assert_called_once_with(
                 expected_cmd,
