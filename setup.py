@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 from setuptools import setup, find_packages
-
+from .fsl_sub_plugin_sge import plugin_version
 
 setup(
     name='fsl_sub_plugin_slurm',
-    version='1.1.2',
+    version=plugin_version(),
     description='FSL Cluster Submission Plugin for Slurm',
     author='Duncan Mortimer',
     author_email='duncan.mortimer@ndcn.ox.ac.uk',
@@ -29,10 +29,10 @@ setup(
     },
     packages=find_packages(),
     license='FSL License',
-    install_requires=['fsl_sub>=2.1.0', ],
+    install_requires=['fsl_sub>=2.3.0', ],
     python_requires='~=3.5',
     package_data={
         'fsl_sub_plugin_slurm': ['fsl_sub_slurm.yml'],
     },
     include_package_data=True,
-    )
+)
