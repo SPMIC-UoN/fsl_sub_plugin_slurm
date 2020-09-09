@@ -5,12 +5,16 @@ import logging
 import os
 import shlex
 import subprocess as sp
+import sys
+import tempfile
 from collections import defaultdict
 from shutil import which
 
+from fsl_sub.version import (VERSION, )
 from fsl_sub.exceptions import (
     BadSubmission,
     BadConfiguration,
+    MissingConfiguration,
     GridOutputError,
     UnknownJobId,
 )
@@ -20,15 +24,20 @@ from fsl_sub.config import (
     read_config,
 )
 import fsl_sub.consts
+from fsl_sub.shell_modules import loaded_modules
 from fsl_sub.utils import (
     split_ram_by_slots,
     human_to_ram,
     parse_array_specifier,
+    bash_cmd,
+    fix_permissions,
+    flatten_list,
+    writelines_nl,
 )
 
 
 def plugin_version():
-    return '1.1.2'
+    return '1.2.0'
 
 
 def qtest():
@@ -86,6 +95,11 @@ def queue_exists(qname, qtest=None):
     return False
 
 
+def already_queued():
+    '''Is this a running SLURM job?'''
+    return ('SLURM_JOB_ID' in os.environ.keys() or 'SLURM_JOBID' in os.environ.keys())
+
+
 def sacct_cmd():
     '''Command that queries job stats'''
     sacct = which('sacct')
@@ -133,8 +147,9 @@ def submit(
         usescript=False,
         architecture=None,
         requeueable=True,
-        project=None
-        ):
+        project=None,
+        copy_vars=[],
+        keep_jobscript=None):
     '''Submits the job to a SLURM cluster
     Requires:
 
@@ -173,6 +188,10 @@ def submit(
             complex description) (string)
     usescript - queue config is defined in script
     project - which account to associate this job with
+    copy_vars - list of environment variables to preserve for job
+            ignored if job is copying complete environment
+    keep_jobscript - whether to generate (if not configured already) and keep
+            a wrapper script for the job
     '''
 
     logger = logging.getLogger('fsl_sub.plugins')
@@ -190,11 +209,17 @@ def submit(
     if isinstance(resources, str):
         resources = [resources, ]
 
-    os.environ['FSLSUB_ARRAYTASKID_VAR'] = 'SLURM_ARRAY_TASK_ID'
-    os.environ['FSLSUB_ARRAYSTARTID_VAR'] = 'SLURM_ARRAY_TASK_MIN'
-    os.environ['FSLSUB_ARRAYENDID_VAR'] = 'SLURM_ARRAY_TASK_MAX'
-    os.environ['FSLSUB_ARRAYSTEPSIZE_VAR'] = ''
-    os.environ['FSLSUB_ARRAYCOUNT_VAR'] = 'SLURM_ARRAY_TASK_COUNT'
+    array_map = {
+        'FSLSUB_JOB_ID_VAR': 'SLURM_JOB_ID',
+        'FSLSUB_ARRAYTASKID_VAR': 'SLURM_ARRAY_TASK_ID',
+        'FSLSUB_ARRAYSTARTID_VAR': 'SLURM_ARRAY_TASK_MIN',
+        'FSLSUB_ARRAYENDID_VAR': 'SLURM_ARRAY_TASK_MAX',
+        'FSLSUB_ARRAYSTEPSIZE_VAR': 'SLURM_ARRAY_TASK_STEP',
+        'FSLSUB_ARRAYCOUNT_VAR': 'SLURM_ARRAY_TASK_COUNT',
+    }
+
+    for array_var, env_var in array_map.items():
+        os.environ[array_var] = env_var
 
     gres = []
     if usescript:
@@ -202,15 +227,27 @@ def submit(
             raise BadSubmission(
                 "Command should be a grid submission script (no arguments)")
         command_args = [command]
+        use_jobscript = False
+        keep_jobscript = False
     else:
+        use_jobscript = mconf.get('use_jobscript', True)
+        if keep_jobscript is None:
+            keep_jobscript = mconf.get('keep_jobscript', False)
+        if keep_jobscript:
+            use_jobscript = True
         # Check Parallel Environment is available
         if parallel_env:
             command_args.extend(
-                ['--cpus-per-task', str(threads), ])
-        if mconf['copy_environment']:
-            command_args.append('='.join(
-                ('--export', 'ALL', )
-            ))
+                ['--ntasks-per-node', str(threads), ])
+        if mconf.get('copy_environment', False):
+            command_args.append('--export=ALL')
+        else:
+            copy_vars.extend(mconf.get('copy_vars', []))
+            copy_vars.extend(array_map.keys())
+            if copy_vars:
+                command_args.append(
+                    '='.join(('--export', ','.join(copy_vars)))
+                )
 
         if coprocessor is not None:
             # Setup the coprocessor
@@ -223,17 +260,15 @@ def submit(
 
                 try:
                     copro_class = available_classes[
-                                        coprocessor_class][
-                                            'resource']
+                        coprocessor_class][
+                            'resource']
                 except KeyError:
                     raise BadSubmission("Unrecognised coprocessor class")
                 if (not coprocessor_class_strict and
                         cpconf['include_more_capable'] and
                         cpconf['slurm_constraints']):
                     copro_capability = available_classes[
-                                            coprocessor_class][
-                                                'capability'
-                                            ]
+                        coprocessor_class]['capability']
                     base_list = [
                         a for a in cpconf['class_types'].keys() if
                         cpconf['class_types'][a]['capability'] >=
@@ -242,15 +277,15 @@ def submit(
                         [
                             cpconf['class_types'][a]['resource'] for a in
                             sorted(
-                                    base_list,
-                                    key=lambda x:
-                                    cpconf['class_types'][x]['capability'])
+                                base_list,
+                                key=lambda x:
+                                cpconf['class_types'][x]['capability'])
                         ]
                     )
                     command_args.append(
                         '='.join(
                             ('--constraint', '"{}"'.format(copro_class)))
-                            )
+                    )
                     gres.append(
                         ":".join(
                             (cpconf['resource'], str(coprocessor_multi))))
@@ -274,12 +309,11 @@ def submit(
             ))
 
         if logdir == '/dev/null':
-            command_args.extend(
-                ['-o', logdir, '-e', logdir]
-            )
+            command_args.append(['-o', logdir, ])
+            command_args.append(['-e', logdir, ])
         else:
             logs = {}
-            for l in ['o', 'e']:
+            for l in ['o', 'e', ]:
                 if array_task:
                     logtemplate = '{0}.{1}%A.%a'
                 else:
@@ -287,12 +321,11 @@ def submit(
                 logs[l] = os.path.join(
                     logdir,
                     logtemplate.format(
-                            job_name.replace(' ', '_'),
-                            l)
-                        )
-            command_args.extend(
-                ['-o ' + logs['o'], '-e ' + logs['e']]
-            )
+                        job_name.replace(' ', '_'),
+                        l)
+                )
+            command_args.append(['-o', logs['o'], ])
+            command_args.append(['-e', logs['e'], ])
 
         hold_state = 'afterok'
         if array_task and array_hold:
@@ -342,9 +375,9 @@ def submit(
             # RAM is specified in megabytes
             try:
                 mem_in_mb = human_to_ram(
-                            jobram,
-                            units=ram_units,
-                            output="M")
+                    jobram,
+                    units=ram_units,
+                    output="M")
             except ValueError:
                 raise BadConfiguration("ram_units not one of P, T, G, M, K")
             if mconf['notify_ram_usage']:
@@ -390,7 +423,7 @@ def submit(
                     array_start,
                     array_end,
                     array_stride
-                    ) = parse_array_specifier(array_specifier)
+                ) = parse_array_specifier(array_specifier)
                 if not array_start:
                     raise BadSubmission("array_specifier doesn't make sense")
                 array_spec = "{0}". format(array_start)
@@ -404,7 +437,6 @@ def submit(
                         array_limit_modifier)))
                 if isinstance(command, str):
                     command = shlex.split(command)
-                command_args.extend(command)
             else:
                 with open(command, 'r') as cmd_f:
                     array_slots = len(cmd_f.readlines())
@@ -421,37 +453,13 @@ def submit(
     logger.info("slurm_args: " + " ".join(
         [str(a) for a in command_args if a != qsub]))
 
-    if usescript:
-        if not isinstance(command, str):
-            raise BadSubmission(
-                "Command should be a grid submission script (no arguments)")
-        command_args.insert(0, qsub)
-        logger.info(
-            "executing cluster script")
-        result = sp.run(
-            command_args,
-            universal_newlines=True,
-            stdout=sp.PIPE, stderr=sp.PIPE
-        )
-    else:
-        scriptcontents = '''#!/bin/bash
-{0}
-'''.format('\n'.join([_slurm_option(x) for x in command_args]))
-        logger.info("Passing command script to STDIN")
-        if array_task and not array_specifier:
-            logger.info("executing array task")
-            scriptcontents += '''
-the_command=$(sed -n -e "${{SLURM_ARRAY_TASK_ID}}p" {0})
+    bash = bash_cmd()
 
-exec /bin/bash -c "$the_command"
-'''.format(command)
-            logger.debug(scriptcontents)
-            result = sp.run(
-                qsub,
-                input=scriptcontents,
-                universal_newlines=True,
-                stdout=sp.PIPE, stderr=sp.PIPE
-            )
+    if array_task and not array_specifier:
+        logger.info("executing array task")
+    else:
+        if usescript:
+            logger.info("executing cluster script")
         else:
             if array_specifier:
                 logger.info("excuting array task {0}-{1}:{2}".format(
@@ -461,16 +469,54 @@ exec /bin/bash -c "$the_command"
                 ))
             else:
                 logger.info("executing single task")
-            scriptcontents += '''
-{}
-'''.format(' '.join([shlex.quote(x) for x in command]))
-            logger.debug(scriptcontents)
-            result = sp.run(
-                qsub,
-                input=scriptcontents,
-                universal_newlines=True,
-                stdout=sp.PIPE,
-                stderr=sp.PIPE)
+
+    logger.info(" ".join([str(a) for a in command_args]))
+    logger.debug(type(command_args))
+    logger.debug(command_args)
+
+    extra_lines = []
+    if array_task and not array_specifier:
+        extra_lines = [
+            '',
+            'the_command=$(sed -n -e "${{SLURM_ARRAY_TASK_ID}}p" {0})'.format(command),
+            '',
+        ]
+        command = ['exec', bash, '-c', '"$the_command"', ]
+        command_args = command_args if use_jobscript else []
+        use_jobscript = True
+
+    js_lines = job_script(
+        command, command_args, extra_lines=extra_lines)
+    logger.debug('\n'.join(js_lines))
+    if keep_jobscript:
+        wrapper_name = write_wrapper(js_lines)
+        logger.debug(wrapper_name)
+        command_args = [wrapper_name]
+        logger.debug("Calling fix_permissions " + str(0o755))
+        fix_permissions(wrapper_name, 0o755)
+    else:
+        if not usescript:
+            command_args = []
+        else:
+            command_args = flatten_list(command_args)
+            if type(command) is list:
+                command_args.extend(command)
+            else:
+                command_args.append(command)
+
+    command_args.insert(0, qsub)
+
+    if keep_jobscript:
+        result = sp.run(
+            command_args, universal_newlines=True,
+            stdout=sp.PIPE, stderr=sp.PIPE)
+    else:
+        result = sp.run(
+            command_args,
+            input='\n'.join(js_lines),
+            universal_newlines=True,
+            stdout=sp.PIPE, stderr=sp.PIPE
+        )
     if result.returncode != 0:
         raise BadSubmission(result.stderr)
     job_words = result.stdout.split(';')
@@ -478,18 +524,85 @@ exec /bin/bash -c "$the_command"
         job_id = int(job_words[0].split('.')[0])
     except ValueError:
         raise GridOutputError("Grid output was " + result.stdout)
+
+    if keep_jobscript:
+        new_name = os.path.join(
+            os.getcwd(),
+            '_'.join((str(job_id), 'wrapper.sh'))
+        )
+        try:
+            logger.debug("Renaming wrapper to " + new_name)
+            os.rename(
+                wrapper_name,
+                new_name
+            )
+        except OSError:
+            logger.warn("Unable to preserve wrapper script")
     return job_id
+
+
+def write_wrapper(content):
+    with tempfile.NamedTemporaryFile(
+            mode='wt',
+            delete=False) as wrapper:
+        writelines_nl(wrapper, content)
+
+    return wrapper.name
+
+
+def job_script(command, command_args, extra_lines=[]):
+    '''Build a job script for 'command' with arguments 'command_args'.
+    If p_vars list is provided this is the list of environment variables
+    to preserve for the job.'''
+
+    mconfig = method_config('slurm')
+
+    bash = bash_cmd()
+
+    job_def = ['#!' + bash, '', ]
+    for cmd in command_args:
+        if type(cmd) is list:
+            job_def.append('#SBATCH ' + ' '.join(cmd))
+        else:
+            job_def.append('#SBATCH ' + str(cmd))
+
+    if mconfig.get('preserve_modules', True):
+        modules = loaded_modules()
+        for module in modules:
+            job_def.append("module load " + module)
+
+    job_def.append(
+        "# Built by fsl_sub v.{0} and fsl_sub_plugin_slurm v.{1}".format(
+            VERSION, plugin_version()
+        ))
+    job_def.append("# Command line: " + " ".join(sys.argv))
+    job_def.append("# Submission time (H:M:S DD/MM/YYYY): " + datetime.datetime.now().strftime("%H:%M:%S %d/%m/%Y"))
+    job_def.append('')
+    job_def.extend(extra_lines)
+    if type(command) is list:
+        job_def.append(" ".join(command))
+    else:
+        job_def.append(command)
+    job_def.append('')
+    return job_def
+
+
+def _default_config_file():
+    return os.path.join(
+        os.path.realpath(os.path.dirname(__file__)),
+        'fsl_sub_slurm.yml')
 
 
 def example_conf():
     '''Returns a string containing the example configuration for this
     cluster plugin.'''
 
-    here = os.path.realpath(os.path.dirname(__file__))
-    with open(os.path.join(here, 'fsl_sub_slurm.yml')) as e_conf_f:
-        e_conf = e_conf_f.readlines()
-
-    return ''.join(e_conf)
+    try:
+        with open(_default_config_file()) as e_conf_f:
+            e_conf = e_conf_f.read()
+    except FileNotFoundError as e:
+        raise MissingConfiguration("Unable to find example configuration file: " + str(e))
+    return e_conf
 
 
 def job_status(job_id, sub_job_id=None):
@@ -648,7 +761,7 @@ def _get_sacct(job_id, sub_job_id=None):
         if stage == '':
             job['name'] = fields[1]
         else:
-            task['maxmemory'] = human_to_ram(fields[-1])
+            task['maxmemory'] = human_to_ram(fields[-1], as_int=False)
 
     return job
 

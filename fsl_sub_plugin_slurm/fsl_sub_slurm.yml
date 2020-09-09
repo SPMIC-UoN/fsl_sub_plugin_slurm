@@ -1,37 +1,19 @@
-# Job submission method to use. Supported values are 'slurm' and 'NONE'
-method: slurm
-# Default units for RAM given
-# (P, T, G, M, K)
-ram_units: G
-
-# List all environment variables that control thread usage
-# will set these to parallel environment threads
-thread_control:
-  - OMP_NUM_THREADS
-  - MKL_NUM_THREADS
-  - MKL_DOMAIN_NUM_THREADS
-  - OPENBLAS_NUM_THREADS
-  - GOTO_NUM_THREADS
-
 method_opts:
-  None:
-    # Leave this secton alone
-    queues: False
-    large_job_split_pe: Null
-    mail_support: False
-    map_ram: False
-    job_priorities: False
-    array_holds: False
-    array_limit: False
-    architecture: False
-    job_resources: False
-    projects: False
   slurm:
     # SLURM doesn't use parallel environments - leave these definitions as is
     queues: True
     large_job_split_pe: threads
     # Replicate user's shell environment to running job
     copy_environment: True
+    # List of environment variables that should copied for the job session.
+    # Your cluster manager will advise of any that should not be copied over - this is
+    # important with clusters optimised for and running different compute node hardware.
+    # If your system uses shell modules to configure FSL then consider enabling wrapper
+    # scripts with 'use_jobscript: True' to reduce or eliminate needing to specify all FSL
+    # variables here.
+    # There is a command-line option, --export, which will augment the variables provided
+    # here.
+    export_vars: []
     # Array holds supported? - Requires Slurm 16.05+
     array_holds: True
     # Array limits - is limiting the number of concurrent array
@@ -74,109 +56,19 @@ method_opts:
     mail_mode: a
     # Whether to support accounts
     projects: True
-
-# The following defines configuration options for co-processor queues
-# Define queues with a copro key set to the name of the appropriate option
-# set and ensure that your queue method has a way of interpreting this
+    # Do you want to load your currently loaded modules in the cluster job?
+    # If your system uses shell modules to configure environment variables then enable
+    # this.
+    preserve_modules: True
+    # Do you want to keep the script used to submit the job to the cluster? The script
+    # will include reproducibility information, e.g. date/time submitted, command line
+    # specified, version of fsl_sub and grid plugin, environment variables passed/inherited
+    # (for systems that must not automatically inherit all variables) and modules loaded
+    # (where a system used modules).
+    keep_wrapper: True
+# If you need to add to the coprocessor options, do so here, for example, list your co-processor
+# types that need slurm_constraints.
 coproc_opts:
   cuda:
-    # Which scheduler resource requests GPU facilities
-    resource: gpu
-    # Whether there are multiple coprocessor classes/types
-    classes: True
-    # This defines the short code for the types and the resource
-    # which will be requested and a documentation string for the help
-    # text
-    class_types:
-      G:
-        # Queue resource to request (on SLURM this may be a constraint or type)
-        resource: TitanX
-        # Documentation about this hardware
-        doc: TitanX. No-ECC, single-precision workloads
-        # Capability level for this hardware, integer value that
-        # allows differentiation between hardware models.
-        capability: 1
-      K:
-        resource: k80
-        doc: Kepler. ECC, double- or single-precision workloads
-        capability: 2
-      P:
-        resource: p100
-        doc: >
-          Pascal. ECC, double-, single- and half-precision
-          workloads
-        capability: 3
-      V:
-        resource: v100
-        doc: >
-          Volta. ECC, double-, single-, half-
-          and quarter-precision workloads
-        capability: 4
-    # If a class is not specified, which class should we use?
-    default_class: K
-    # Should we also allow running on more capable hardware?
-    # Requires constraints on SLURM
-    include_more_capable: True
-    # Should we use Shell modules to load the environment settings for
-    # the hardware?
-    uses_modules: True
-    # What is the name of the parent module for this co-processor?
-    module_parent: cuda
     # Does the SURLM cluster use constraints to specify GPU types?
     slurm_constraints: True
-# Queue definitions (Partitions in SLURM)
-queues:
-  # Queue name
-  gpu.q:
-    # Maximum job rum time
-    time: 18000
-    # Maximum memory per job (GB)
-    max_size: 250
-    # Maximum memory per CPU core (GB)
-    slot_size: 64
-    # Maximum number of threads per job (e.g. number of CPU cores)
-    max_slots: 20
-    # Available coprocessors
-    copros:
-      # Coprocessor name (same as configuration above)
-      cuda:
-        # Number of devices available per job (e.g. number of devices on a single node)
-        max_quantity: 4
-        # List of available classes
-        classes:
-          - K
-          - P
-          - V
-    # Should jobs be split over multiple slots when requires more RAM than available
-    # in a single slot
-    map_ram: true
-    # Priority of queue, higher numbers win
-    priority: 1
-    # Group of queue - use this to group together variations of a queue based on
-    # hardware types, the priority is then used to decide which variant to use
-    group: 0
-  short:
-    time: 1440
-    max_size: 160
-    slot_size: 4
-    max_slots: 16
-    map_ram: true
-    priority: 1
-    group: 1
-  long:
-    time: 10080
-    max_size: 368
-    slot_size: 16
-    max_slots: 24
-    map_ram: true
-    priority: 1
-    group: 2
-    default: True
-  verylong.q:
-    time: 1000000
-    max_size: 500
-    slot_size: 12
-    max_slots: 8
-    map_ram: False
-    priority: 1
-    group: 3

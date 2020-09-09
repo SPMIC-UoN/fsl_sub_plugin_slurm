@@ -1,7 +1,9 @@
 #!/usr/bin/env python
+import copy
 import datetime
 import os
 import subprocess
+import tempfile
 import unittest
 import yaml
 import fsl_sub_plugin_slurm
@@ -45,7 +47,7 @@ method_opts:
         architecture: False
         export_vars: []
         preserve_modules: True
-        keep_wrapper: False
+        keep_jobscript: False
         preserve_modules: True
 copro_opts:
     cuda:
@@ -133,9 +135,9 @@ class TestSlurmReporting(unittest.TestCase):
             slurm_example_sacct = (
                 '''1716106|acctest|2018-06-05T09:42:24|2018-06-05T09:42:24|'''
                 '''2018-06-05T09:44:08|00:00:00|00:00.004|COMPLETED|0:0|
-    1716106.batch|batch|2018-06-05T09:42:24|2018-06-05T09:42:24|'''
+1716106.batch|batch|2018-06-05T09:42:24|2018-06-05T09:42:24|'''
                 '''2018-06-05T09:44:08|00:00:00|00:00.004|COMPLETED|0:0|202.15M
-    ''')
+''')
             mock_sprun.return_value = subprocess.CompletedProcess(
                 '/usr/bin/sacct',
                 stdout=slurm_example_sacct,
@@ -354,10 +356,8 @@ class TestslurmFinders(unittest.TestCase):
                 )
 
 
-@patch(
-    'fsl_sub_plugin_slurm.read_config', autospec=True,
-    return_value=conf_dict
-)
+@patch('fsl_sub_plugin_slurm.VERSION', '1.0.0')
+@patch('fsl_sub_plugin_slurm.sys.argv', ['fsl_sub', '-q', 'a.q', './acmd', 'arg1', 'arg2'])
 @patch(
     'fsl_sub_plugin_slurm.os.getcwd',
     autospec=True, return_value='/Users/testuser')
@@ -365,20 +365,66 @@ class TestslurmFinders(unittest.TestCase):
     'fsl_sub_plugin_slurm.qsub_cmd',
     autospec=True, return_value='/usr/bin/sbatch'
 )
-@patch(
-    'fsl_sub_plugin_slurm.method_config', autospec=True,
-    return_value=mconf_dict)
 @patch('fsl_sub_plugin_slurm.split_ram_by_slots', autospec=True)
 @patch('fsl_sub_plugin_slurm.coprocessor_config', autospec=True)
 @patch('fsl_sub_plugin_slurm.sp.run', autospec=True)
 class TestSubmit(unittest.TestCase):
+    def setUp(self):
+        fsl_sub_plugin_slurm.fsl_sub.config.has_queues.cache_clear()
+        fsl_sub_plugin_slurm.fsl_sub.config.read_config.cache_clear()
+        fsl_sub_plugin_slurm.fsl_sub.config.method_config.cache_clear()
+        fsl_sub_plugin_slurm.fsl_sub.config.queue_config.cache_clear()
+        self.ww = tempfile.NamedTemporaryFile(
+            mode='w+t',
+            delete=False)
+        self.now = datetime.datetime.now()
+        self.strftime = datetime.datetime.strftime
+        self.bash = '/bin/bash'
+        self.config = copy.deepcopy(conf_dict)
+        self.mconfig = self.config['method_opts']['slurm']
+        self.patch_objects = {
+            'fsl_sub_plugin_slurm.datetime': {'autospec': True, },
+            'fsl_sub_plugin_slurm.plugin_version': {'autospec': True, 'return_value': '2.0.0', },
+            'fsl_sub_plugin_slurm.loaded_modules': {'autospec': True, 'return_value': ['mymodule', ], },
+            'fsl_sub_plugin_slurm.bash_cmd': {'autospec': True, 'return_value': self.bash, },
+            'fsl_sub_plugin_slurm.write_wrapper': {'autospec': True, 'side_effect': self.w_wrapper},
+            'fsl_sub_plugin_slurm.read_config': {'autospec': True, 'return_value': self.config, },
+            'fsl_sub_plugin_slurm.method_config': {'autospec': True, 'return_value': self.mconfig, },
+        }
+        self.patch_dict_objects = {}
+        self.patches = {}
+        for p, kwargs in self.patch_objects.items():
+            self.patches[p] = patch(p, **kwargs)
+        self.mocks = {}
+        for o, p in self.patches.items():
+            self.mocks[o] = p.start()
+
+        self.dict_patches = {}
+        for p, kwargs in self.patch_dict_objects.items():
+            self.dict_patches[p] = patch.dict(p, **kwargs)
+
+        for o, p in self.dict_patches.items():
+            self.mocks[o] = p.start()
+        self.mocks['fsl_sub_plugin_slurm.datetime'].datetime.now.return_value = self.now
+        self.mocks['fsl_sub_plugin_slurm.datetime'].datetime.strftime = self.strftime
+        self.addCleanup(patch.stopall)
+
+    def TearDown(self):
+        self.ww.close()
+        os.unlink(self.ww.name)
+        patch.stopall()
 
     plugin = fsl_sub_plugin_slurm
 
+    def w_wrapper(self, content):
+        for l in content:
+            self.ww.write(l + '\n')
+        return self.ww.name
+
     def test_empty_submit(
             self, mock_sprun, mock_cpconf,
-            mock_srbs, mock_mconf, mock_qsub,
-            mock_getcwd, mock_readconf):
+            mock_srbs, mock_qsub,
+            mock_getcwd):
         self.assertRaises(
             self.plugin.BadSubmission,
             self.plugin.submit,
@@ -387,30 +433,35 @@ class TestSubmit(unittest.TestCase):
 
     def test_submit_basic(
             self, mock_sprun, mock_cpconf,
-            mock_srbs, mock_mconf, mock_qsub,
-            mock_getcwd, mock_readconf):
+            mock_srbs, mock_qsub,
+            mock_getcwd):
         job_name = 'test_job'
         queue = 'a.q'
-        cmd = ['acmd', 'arg1', 'arg2', ]
+        cmd = ['./acmd', 'arg1', 'arg2', ]
         logdir = os.getcwd()
         jid = 12345
         qsub_out = str(jid)
         with self.subTest("Slurm"):
-            expected_cmd = '/usr/bin/sbatch'
-            expected_script = '''#!/bin/bash
+            expected_cmd = ['/usr/bin/sbatch']
+            expected_script = '#!' + self.bash + '''
+
 #SBATCH --export=ALL
-#SBATCH --cpu-bind=threads
 #SBATCH -o {0}.o%j
 #SBATCH -e {0}.e%j
 #SBATCH --job-name={1}
 #SBATCH -p {2}
 #SBATCH --parsable
 #SBATCH --requeue
+module load mymodule
+# Built by fsl_sub v.1.0.0 and fsl_sub_plugin_slurm v.2.0.0
+# Command line: fsl_sub -q {2} {3}
+# Submission time (H:M:S DD/MM/YYYY): {4}
 
 {3}
 '''.format(
                 os.path.join(logdir, job_name),
-                job_name, queue, ' '.join(cmd))
+                job_name, queue, ' '.join(cmd),
+                self.now.strftime("%H:%M:%S %d/%m/%Y"))
             mock_sprun.return_value = subprocess.CompletedProcess(
                 expected_cmd, 0,
                 stdout=qsub_out, stderr=None)
@@ -432,34 +483,40 @@ class TestSubmit(unittest.TestCase):
 
     def test_project_submit(
             self, mock_sprun, mock_cpconf,
-            mock_srbs, mock_mconf, mock_qsub,
-            mock_getcwd, mock_readconf):
+            mock_srbs, mock_qsub,
+            mock_getcwd):
         job_name = 'test_job'
         queue = 'a.q'
         project = 'Aproject'
-        cmd = ['acmd', 'arg1', 'arg2', ]
+        cmd = ['./acmd', 'arg1', 'arg2', ]
         logdir = os.getcwd()
         jid = 12345
         qsub_out = str(jid)
         with self.subTest("No projects"):
-            test_dict = dict(mconf_dict)
-            test_dict['projects'] = False
-            mock_mconf.return_value = test_dict
-            expected_cmd = '/usr/bin/sbatch'
-            expected_script = '''#!/bin/bash
+            w_conf = self.config
+            w_conf['projects'] = True
+            self.mocks['fsl_sub_plugin_slurm.read_config'].return_value = w_conf
+            self.mocks['fsl_sub_plugin_slurm.method_config'].return_value = w_conf['method_opts']['slurm']
+            expected_cmd = ['/usr/bin/sbatch']
+            expected_script = '#!' + self.bash + '''
+
 #SBATCH --export=ALL
-#SBATCH --cpu-bind=threads
 #SBATCH -o {0}.o%j
 #SBATCH -e {0}.e%j
 #SBATCH --job-name={1}
 #SBATCH -p {2}
 #SBATCH --parsable
 #SBATCH --requeue
+module load mymodule
+# Built by fsl_sub v.1.0.0 and fsl_sub_plugin_slurm v.2.0.0
+# Command line: fsl_sub -q {2} {3}
+# Submission time (H:M:S DD/MM/YYYY): {4}
 
 {3}
 '''.format(
                 os.path.join(logdir, job_name),
-                job_name, queue, ' '.join(cmd))
+                job_name, queue, ' '.join(cmd),
+                self.now.strftime("%H:%M:%S %d/%m/%Y"))
             mock_sprun.return_value = subprocess.CompletedProcess(
                 expected_cmd, 0,
                 stdout=qsub_out, stderr=None)
@@ -479,13 +536,12 @@ class TestSubmit(unittest.TestCase):
                 input=expected_script
             )
         mock_sprun.reset_mock()
-        mock_mconf.return_value = mconf_dict
+        self.mocks['fsl_sub_plugin_slurm.method_config'].return_value = mconf_dict
         with self.subTest("With Project"):
-            mock_mconf.return_value = mconf_dict
-            expected_cmd = '/usr/bin/sbatch'
-            expected_script = '''#!/bin/bash
+            expected_cmd = ['/usr/bin/sbatch']
+            expected_script = '#!' + self.bash + '''
+
 #SBATCH --export=ALL
-#SBATCH --cpu-bind=threads
 #SBATCH -o {0}.o%j
 #SBATCH -e {0}.e%j
 #SBATCH --job-name={1}
@@ -493,11 +549,16 @@ class TestSubmit(unittest.TestCase):
 #SBATCH --parsable
 #SBATCH --requeue
 #SBATCH --account {3}
+module load mymodule
+# Built by fsl_sub v.1.0.0 and fsl_sub_plugin_slurm v.2.0.0
+# Command line: fsl_sub -q {2} {4}
+# Submission time (H:M:S DD/MM/YYYY): {5}
 
 {4}
 '''.format(
                 os.path.join(logdir, job_name),
-                job_name, queue, project, ' '.join(cmd))
+                job_name, queue, project, ' '.join(cmd),
+                self.now.strftime("%H:%M:%S %d/%m/%Y"))
             mock_sprun.return_value = subprocess.CompletedProcess(
                 expected_cmd, 0,
                 stdout=qsub_out, stderr=None)
@@ -517,7 +578,148 @@ class TestSubmit(unittest.TestCase):
                 universal_newlines=True,
                 input=expected_script
             )
-#####
+
+        def test_submit_wrapper_set_vars(
+                self, mock_sprun, mock_cpconf,
+                mock_srbs, mock_qsub,
+                mock_getcwd):
+            job_name = 'test_job'
+            queue = 'a.q'
+            cmd = ['./acmd', 'arg1', 'arg2', ]
+            logdir = os.getcwd()
+            jid = 12345
+            qsub_out = str(jid)
+            w_conf = self.config
+            w_conf['method_opts']['slurm']['use_jobscript'] = True
+            w_conf['method_opts']['slurm']['copy_environment'] = False
+            self.mocks['fsl_sub_plugin_slurm.read_config'].return_value = w_conf
+            self.mocks['fsl_sub_plugin_slurm.method_config'].return_value = w_conf['method_opts']['slurm']
+            mock_cpconf.return_value = w_conf['copro_opts']['cuda']
+
+            expected_cmd = ['/usr/bin/sbatch']
+            expected_script = '''#!{0}
+
+#SBATCH --export=FSLSUB_JOB_ID_VAR=SLURM_JOB_ID,\
+FSLSUB_ARRAYTASKID_VAR=SLURM_ARRAY_TASK_ID',\
+FSLSUB_ARRAYSTARTID_VAR=SLURM_ARRAY_TASK_MIN',\
+FSLSUB_ARRAYENDID_VAR=SLURM_ARRAY_TASK_MAX',\
+FSLSUB_ARRAYSTEPSIZE_VAR=SLURM_ARRAY_TASK_STEP',\
+FSLSUB_ARRAYCOUNT_VAR=SLURM_ARRAY_TASK_COUNT'
+#SBATCH -o {1}.o%j
+#SBATCH -e {1}.e%j
+#SBATCH --job-name={2}
+#SBATCH -p {3}
+#SBATCH --parsable
+#SBATCH --requeue
+module load mymodule
+# Built by fsl_sub v.1.0.0 and fsl_sub_plugin_slurm v.2.0.0
+# Command line: fsl_sub -q {3} {4}
+# Submission time (H:M:S DD/MM/YYYY): {5}
+
+{4}
+'''.format(
+                self.bash,
+                os.path.join(logdir, job_name),
+                job_name,
+                queue, ' '.join(cmd),
+                self.now.strftime("%H:%M:%S %d/%m/%Y")
+            )
+            mock_sprun.return_value = subprocess.CompletedProcess(
+                expected_cmd, 0,
+                stdout=qsub_out, stderr=None)
+            self.assertEqual(
+                jid,
+                self.plugin.submit(
+                    command=cmd,
+                    job_name=job_name,
+                    queue=queue
+                )
+            )
+            mock_sprun.assert_called_once_with(
+                expected_cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                universal_newlines=True,
+                input=expected_script
+            )
+            mock_sprun.reset_mock()
+
+    def test_submit_wrapper_keep(
+            self, mock_sprun, mock_cpconf,
+            mock_srbs, mock_qsub,
+            mock_getcwd):
+        job_name = 'test_job'
+        queue = 'a.q'
+        cmd = ['./acmd', 'arg1', 'arg2', ]
+        logdir = os.getcwd()
+        jid = 12345
+        qsub_out = str(jid)
+        w_conf = self.config
+        w_conf['method_opts']['slurm']['use_jobscript'] = True
+        w_conf['method_opts']['slurm']['copy_environment'] = False
+        self.mocks['fsl_sub_plugin_slurm.read_config'].return_value = w_conf
+        self.mocks['fsl_sub_plugin_slurm.method_config'].return_value = w_conf['method_opts']['slurm']
+        mock_cpconf.return_value = w_conf['copro_opts']['cuda']
+
+        expected_cmd = ['/usr/bin/sbatch', self.ww.name]
+        expected_script = [
+            '#!' + self.bash,
+            '',
+            '#SBATCH --export=FSLSUB_JOB_ID_VAR,'
+            'FSLSUB_ARRAYTASKID_VAR,'
+            'FSLSUB_ARRAYSTARTID_VAR,'
+            'FSLSUB_ARRAYENDID_VAR,'
+            'FSLSUB_ARRAYSTEPSIZE_VAR,'
+            'FSLSUB_ARRAYCOUNT_VAR',
+            '#SBATCH -o {0}.o%j'.format(os.path.join(logdir, job_name)),
+            '#SBATCH -e {0}.e%j'.format(os.path.join(logdir, job_name)),
+            '#SBATCH --job-name=' + job_name,
+            '#SBATCH -p ' + queue,
+            '#SBATCH --parsable',
+            '#SBATCH --requeue',
+            'module load mymodule',
+            '# Built by fsl_sub v.1.0.0 and fsl_sub_plugin_slurm v.2.0.0',
+            '# Command line: fsl_sub -q {0} {1}'.format(queue, ' '.join(cmd)),
+            '# Submission time (H:M:S DD/MM/YYYY): ' + self.now.strftime("%H:%M:%S %d/%m/%Y"),
+            '',
+            ' '.join(cmd),
+            ''
+        ]
+        mock_sprun.return_value = subprocess.CompletedProcess(
+            expected_cmd, 0,
+            stdout=qsub_out, stderr=None)
+
+        with patch('fsl_sub_plugin_slurm.os.rename') as mock_rename:
+            self.assertEqual(
+                jid,
+                self.plugin.submit(
+                    command=cmd,
+                    job_name=job_name,
+                    queue=queue,
+                    keep_jobscript=True
+                )
+            )
+        mock_sprun.assert_called_once_with(
+            expected_cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            universal_newlines=True,
+        )
+        mock_sprun.reset_mock()
+        self.ww.seek(0)
+        wrapper_lines = self.ww.read().splitlines()
+        self.maxDiff = None
+        self.assertListEqual(
+            wrapper_lines,
+            expected_script
+        )
+        mock_rename.assert_called_once_with(
+            self.ww.name,
+            os.path.join(
+                os.getcwd(),
+                '_'.join((str(jid), 'wrapper.sh'))
+            )
+        )
 
 #     def test_submit_requeueable(
 #             self, mock_sprun, mock_cpconf,
