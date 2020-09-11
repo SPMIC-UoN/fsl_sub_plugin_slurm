@@ -20,7 +20,7 @@ Where fsl_sub is to be used outside of the FSL distribution it is recommended th
 
 FSL ships with fsl_sub pre-installed but lacking any grid backends. To install this backend use the fsl_sub_plugin helper script:
 
-$FSLDIR/etc/fslconf/fsl_sub_plugin -i fsl_sub_plugin_sge
+$FSLDIR/etc/fslconf/fsl_sub_plugin -i fsl_sub_plugin_slurm
 
 ### Installing plugins
 
@@ -28,17 +28,17 @@ If you only need to run programs locally, fsl_sub ships with a local job plugin,
 
 #### virtualenv
 
-> pip install git+ssh://git@git.fmrib.ox.ac.uk/fsl/fsl_sub_plugin_sge.git
+> pip install git+ssh://git@git.fmrib.ox.ac.uk/fsl/fsl_sub_plugin_slurm.git
 
 #### conda
 
-> conda install fsl_sub_plugin_sge
+> conda install fsl_sub_plugin_slurm
 
 ### Configuration
 
 A configuration file in YAML format is required to describe your cluster environment, an example configuration can be generated with:
 
-> fsl_sub_config sge > fsl_sub.yml
+> fsl_sub_config slurm > fsl_sub.yml
 
 This configuration file can be copied to _fsldir_/etc/fslconf (calling it fsl_sub.yml), or put in your home folder calling it .fsl_sub.yml. A copy in your home folder will override the file in _fsldir_/etc/fslconf.
 
