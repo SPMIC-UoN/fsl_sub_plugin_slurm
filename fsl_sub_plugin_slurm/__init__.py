@@ -34,10 +34,11 @@ from fsl_sub.utils import (
     flatten_list,
     writelines_nl,
 )
+from .version import PLUGIN_VERSION
 
 
 def plugin_version():
-    return '1.2.0'
+    return PLUGIN_VERSION
 
 
 def qtest():

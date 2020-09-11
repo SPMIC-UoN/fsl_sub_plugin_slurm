@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 from setuptools import setup, find_packages
-from .fsl_sub_plugin_sge import plugin_version
+from fsl_sub_plugin_slurm.version import PLUGIN_VERSION
 
 setup(
     name='fsl_sub_plugin_slurm',
-    version=plugin_version(),
+    version=PLUGIN_VERSION,
     description='FSL Cluster Submission Plugin for Slurm',
     author='Duncan Mortimer',
     author_email='duncan.mortimer@ndcn.ox.ac.uk',
