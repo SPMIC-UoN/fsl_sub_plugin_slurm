@@ -16,7 +16,7 @@ from fsl_sub.exceptions import (
     UnknownJobId
 )
 
-conf_dict = yaml.load('''---
+conf_dict = yaml.safe_load('''---
 ram_units: G
 method_opts:
     slurm:
