@@ -370,10 +370,7 @@ class TestslurmFinders(unittest.TestCase):
 @patch('fsl_sub_plugin_slurm.sp.run', autospec=True)
 class TestSubmit(unittest.TestCase):
     def setUp(self):
-        fsl_sub_plugin_slurm.fsl_sub.config.has_queues.cache_clear()
         fsl_sub_plugin_slurm.fsl_sub.config.read_config.cache_clear()
-        fsl_sub_plugin_slurm.fsl_sub.config.method_config.cache_clear()
-        fsl_sub_plugin_slurm.fsl_sub.config.queue_config.cache_clear()
         self.ww = tempfile.NamedTemporaryFile(
             mode='w+t',
             delete=False)
