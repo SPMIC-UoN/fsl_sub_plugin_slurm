@@ -926,3 +926,8 @@ def project_list():
     except sp.CalledProcessError as e:
         raise GridOutputError(e.stderr)
     return [a[0] for a in accounts_out.stdout.split('|')]
+
+
+def build_queue_defs():
+    '''Not currently implemented'''
+    return ('', [])
