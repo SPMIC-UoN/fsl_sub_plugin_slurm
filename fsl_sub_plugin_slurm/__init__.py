@@ -930,4 +930,4 @@ def project_list():
 
 def build_queue_defs():
     '''Not currently implemented'''
-    return ('', [])
+    return ''
