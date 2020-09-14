@@ -121,6 +121,10 @@ def _slurm_option(opt):
     return "#SBATCH " + opt
 
 
+def _get_logger():
+    return logging.getLogger('fsl_sub.' + __name__)
+
+
 def submit(
         command,
         job_name,
@@ -195,7 +199,7 @@ def submit(
             a wrapper script for the job
     '''
 
-    logger = logging.getLogger('fsl_sub.plugins')
+    logger = _get_logger()
 
     if command is None:
         raise BadSubmission(
