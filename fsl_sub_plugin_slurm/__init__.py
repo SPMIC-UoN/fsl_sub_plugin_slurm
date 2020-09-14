@@ -3,7 +3,6 @@
 import datetime
 import logging
 import os
-import shlex
 import subprocess as sp
 import sys
 import tempfile
@@ -158,10 +157,10 @@ def submit(
     '''Submits the job to a SLURM cluster
     Requires:
 
-    command - string or list containing command to run
+    command - string (array_task file name) or list (other job types) containing command to run
                 or the file name of the array task file.
                 If array_specifier is given then this must be
-                a string/list containing the command to run.
+                a list containing the command to run.
     job_name - Symbolic name for task
     queue - Queue to submit to
 
@@ -440,8 +439,6 @@ def submit(
                     "=".join('--array', "{0}{1}".format(
                         array_spec,
                         array_limit_modifier)))
-                if isinstance(command, str):
-                    command = shlex.split(command)
             else:
                 with open(command, 'r') as cmd_f:
                     array_slots = len(cmd_f.readlines())
@@ -450,10 +447,6 @@ def submit(
                         '--array', "1-{0}{1}".format(
                             array_slots,
                             array_limit_modifier))))
-        else:
-            # Submit single script/binary
-            if isinstance(command, str):
-                command = shlex.split(command)
 
     logger.info("slurm_args: " + " ".join(
         [str(a) for a in command_args if a != qsub]))
