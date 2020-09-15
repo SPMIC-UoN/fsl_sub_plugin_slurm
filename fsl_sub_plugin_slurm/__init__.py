@@ -157,7 +157,7 @@ def submit(
     '''Submits the job to a SLURM cluster
     Requires:
 
-    command - string (array_task file name) or list (other job types) containing command to run
+    command - list containing command to run
                 or the file name of the array task file.
                 If array_specifier is given then this must be
                 a list containing the command to run.
@@ -203,7 +203,10 @@ def submit(
     if command is None:
         raise BadSubmission(
             "Must provide command line or array task file name")
-
+    if not isinstance(command, list):
+        raise BadSubmission(
+            "Internal error: command argument must be a list"
+        )
     mconf = defaultdict(lambda: False, method_config('Slurm'))
     qsub = qsub_cmd()
     command_args = []
