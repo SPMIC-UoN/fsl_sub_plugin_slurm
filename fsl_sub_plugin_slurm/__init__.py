@@ -529,7 +529,7 @@ def submit(
     if keep_jobscript:
         new_name = os.path.join(
             os.getcwd(),
-            '_'.join((str(job_id), 'wrapper.sh'))
+            '_'.join(('wrapper', str(job_id))) + '.sh'
         )
         try:
             logger.debug("Renaming wrapper to " + new_name)
