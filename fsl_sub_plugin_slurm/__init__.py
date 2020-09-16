@@ -230,10 +230,9 @@ def submit(
 
     gres = []
     if usescript:
-        if not isinstance(command, str):
+        if len(command) > 1:
             raise BadSubmission(
                 "Command should be a grid submission script (no arguments)")
-        command_args = [command]
         use_jobscript = False
         keep_jobscript = False
     else:
@@ -443,7 +442,7 @@ def submit(
                         array_spec,
                         array_limit_modifier)))
             else:
-                with open(command, 'r') as cmd_f:
+                with open(command[0], 'r') as cmd_f:
                     array_slots = len(cmd_f.readlines())
                 command_args.append(
                     "=".join((
@@ -500,10 +499,7 @@ def submit(
             command_args = []
         else:
             command_args = flatten_list(command_args)
-            if type(command) is list:
-                command_args.extend(command)
-            else:
-                command_args.append(command)
+            command_args.extend(command)
 
     command_args.insert(0, qsub)
 
