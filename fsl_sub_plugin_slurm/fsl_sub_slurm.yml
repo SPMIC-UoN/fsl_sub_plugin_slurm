@@ -5,15 +5,6 @@ method_opts:
     large_job_split_pe: threads
     # Replicate user's shell environment to running job
     copy_environment: True
-    # List of environment variables that should copied for the job session.
-    # Your cluster manager will advise of any that should not be copied over - this is
-    # important with clusters optimised for and running different compute node hardware.
-    # If your system uses shell modules to configure FSL then consider enabling wrapper
-    # scripts with 'use_jobscript: True' to reduce or eliminate needing to specify all FSL
-    # variables here.
-    # There is a command-line option, --export, which will augment the variables provided
-    # here.
-    export_vars: []
     # Array holds supported? - Requires Slurm 16.05+
     array_holds: True
     # Array limits - is limiting the number of concurrent array

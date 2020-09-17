@@ -152,7 +152,7 @@ def submit(
         architecture=None,
         requeueable=True,
         project=None,
-        copy_vars=[],
+        export_vars=[],
         keep_jobscript=None):
     '''Submits the job to a SLURM cluster
     Requires:
@@ -192,7 +192,7 @@ def submit(
             complex description) (string)
     usescript - queue config is defined in script
     project - which account to associate this job with
-    copy_vars - list of environment variables to preserve for job
+    export_vars - list of environment variables to preserve for job
             ignored if job is copying complete environment
     keep_jobscript - whether to generate (if not configured already) and keep
             a wrapper script for the job
@@ -247,13 +247,15 @@ def submit(
                 ['--ntasks-per-node', str(threads), ])
         if mconf.get('copy_environment', False):
             command_args.append('--export=ALL')
-        else:
-            copy_vars.extend(mconf.get('copy_vars', []))
-            copy_vars.extend(array_map.keys())
-            if copy_vars:
-                command_args.append(
-                    '='.join(('--export', ','.join(copy_vars)))
-                )
+
+        for var, value in array_map.items():
+            if not value:
+                value = '""'
+            export_vars.append('='.join((var, value)))
+        if export_vars:
+            command_args.append(
+                '='.join(('--export', ','.join(export_vars)))
+            )
 
         if coprocessor is not None:
             # Setup the coprocessor
