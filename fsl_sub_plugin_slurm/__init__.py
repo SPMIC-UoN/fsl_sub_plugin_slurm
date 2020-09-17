@@ -4,12 +4,9 @@ import datetime
 import logging
 import os
 import subprocess as sp
-import sys
-import tempfile
 from collections import defaultdict
 from shutil import which
 
-from fsl_sub.version import (VERSION, )
 from fsl_sub.exceptions import (
     BadSubmission,
     BadConfiguration,
@@ -34,10 +31,14 @@ from fsl_sub.utils import (
     bash_cmd,
     fix_permissions,
     flatten_list,
-    writelines_nl,
+    job_script,
+    write_wrapper,
     update_envvar_list,
 )
 from .version import PLUGIN_VERSION
+
+
+METHOD_NAME = 'slurm'
 
 
 def plugin_version():
@@ -211,12 +212,11 @@ def submit(
         raise BadSubmission(
             "Internal error: command argument must be a list"
         )
-    mconf = defaultdict(lambda: False, method_config('Slurm'))
+    mconf = defaultdict(lambda: False, method_config(METHOD_NAME))
     qsub = qsub_cmd()
     command_args = []
 
     modules = []
-    mconfig = method_config('slurm')
     if logdir is None:
         logdir = os.getcwd()
     if isinstance(resources, str):
@@ -490,14 +490,16 @@ def submit(
         command_args = command_args if use_jobscript else []
         use_jobscript = True
 
-    if mconfig.get('preserve_modules', True):
+    if mconf.get('preserve_modules', True):
         modules = loaded_modules()
         if coprocessor_toolkit:
             cp_module = coproc_get_module(coprocessor, coprocessor_toolkit)
             if cp_module is not None:
                 modules.append(cp_module)
     js_lines = job_script(
-        command, command_args, modules=modules, extra_lines=extra_lines)
+        command, command_args,
+        '#SBATCH', (METHOD_NAME, plugin_version()),
+        modules=modules, extra_lines=extra_lines)
     logger.debug('\n'.join(js_lines))
     if keep_jobscript:
         wrapper_name = write_wrapper(js_lines)
@@ -547,48 +549,6 @@ def submit(
         except OSError:
             logger.warn("Unable to preserve wrapper script")
     return job_id
-
-
-def write_wrapper(content):
-    with tempfile.NamedTemporaryFile(
-            mode='wt',
-            delete=False) as wrapper:
-        writelines_nl(wrapper, content)
-
-    return wrapper.name
-
-
-def job_script(command, command_args, modules=[], extra_lines=[]):
-    '''Build a job script for 'command' with arguments 'command_args'.
-    If p_vars list is provided this is the list of environment variables
-    to preserve for the job.'''
-
-    bash = bash_cmd()
-
-    job_def = ['#!' + bash, '', ]
-    for cmd in command_args:
-        if type(cmd) is list:
-            job_def.append('#SBATCH ' + ' '.join(cmd))
-        else:
-            job_def.append('#SBATCH ' + str(cmd))
-
-    for module in modules:
-        job_def.append("module load " + module)
-
-    job_def.append(
-        "# Built by fsl_sub v.{0} and fsl_sub_plugin_slurm v.{1}".format(
-            VERSION, plugin_version()
-        ))
-    job_def.append("# Command line: " + " ".join(sys.argv))
-    job_def.append("# Submission time (H:M:S DD/MM/YYYY): " + datetime.datetime.now().strftime("%H:%M:%S %d/%m/%Y"))
-    job_def.append('')
-    job_def.extend(extra_lines)
-    if type(command) is list:
-        job_def.append(" ".join(command))
-    else:
-        job_def.append(command)
-    job_def.append('')
-    return job_def
 
 
 def _default_config_file():
