@@ -226,9 +226,6 @@ def submit(
         'FSLSUB_ARRAYCOUNT_VAR': 'SLURM_ARRAY_TASK_COUNT',
     }
 
-    for array_var, env_var in array_map.items():
-        os.environ[array_var] = env_var
-
     gres = []
     if usescript:
         if len(command) > 1:
