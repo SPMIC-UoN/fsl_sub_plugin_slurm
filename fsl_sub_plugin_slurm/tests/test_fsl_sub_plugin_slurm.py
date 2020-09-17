@@ -440,9 +440,16 @@ class TestSubmit(unittest.TestCase):
         qsub_out = str(jid)
         with self.subTest("Slurm"):
             expected_cmd = ['/usr/bin/sbatch']
-            expected_script = '#!' + self.bash + '''
+            expected_script = (
+                '#!' + self.bash + '''
 
-#SBATCH --export=ALL
+#SBATCH --export=ALL,'''
+                '''FSLSUB_JOB_ID_VAR=SLURM_JOB_ID,'''
+                '''FSLSUB_ARRAYTASKID_VAR=SLURM_ARRAY_TASK_ID,'''
+                '''FSLSUB_ARRAYSTARTID_VAR=SLURM_ARRAY_TASK_MIN,'''
+                '''FSLSUB_ARRAYENDID_VAR=SLURM_ARRAY_TASK_MAX,'''
+                '''FSLSUB_ARRAYSTEPSIZE_VAR=SLURM_ARRAY_TASK_STEP,'''
+                '''FSLSUB_ARRAYCOUNT_VAR=SLURM_ARRAY_TASK_COUNT
 #SBATCH -o {0}.o%j
 #SBATCH -e {0}.e%j
 #SBATCH --job-name={1}
@@ -456,9 +463,10 @@ module load mymodule
 
 {3}
 '''.format(
-                os.path.join(logdir, job_name),
-                job_name, queue, ' '.join(cmd),
-                self.now.strftime("%H:%M:%S %d/%m/%Y"))
+                    os.path.join(logdir, job_name),
+                    job_name, queue, ' '.join(cmd),
+                    self.now.strftime("%H:%M:%S %d/%m/%Y"))
+            )
             mock_sprun.return_value = subprocess.CompletedProcess(
                 expected_cmd, 0,
                 stdout=qsub_out, stderr=None)
@@ -495,9 +503,16 @@ module load mymodule
             self.mocks['fsl_sub_plugin_slurm.read_config'].return_value = w_conf
             self.mocks['fsl_sub_plugin_slurm.method_config'].return_value = w_conf['method_opts']['slurm']
             expected_cmd = ['/usr/bin/sbatch']
-            expected_script = '#!' + self.bash + '''
+            expected_script = (
+                '#!' + self.bash + '''
 
-#SBATCH --export=ALL
+#SBATCH --export=ALL,'''
+                '''FSLSUB_JOB_ID_VAR=SLURM_JOB_ID,'''
+                '''FSLSUB_ARRAYTASKID_VAR=SLURM_ARRAY_TASK_ID,'''
+                '''FSLSUB_ARRAYSTARTID_VAR=SLURM_ARRAY_TASK_MIN,'''
+                '''FSLSUB_ARRAYENDID_VAR=SLURM_ARRAY_TASK_MAX,'''
+                '''FSLSUB_ARRAYSTEPSIZE_VAR=SLURM_ARRAY_TASK_STEP,'''
+                '''FSLSUB_ARRAYCOUNT_VAR=SLURM_ARRAY_TASK_COUNT
 #SBATCH -o {0}.o%j
 #SBATCH -e {0}.e%j
 #SBATCH --job-name={1}
@@ -511,9 +526,10 @@ module load mymodule
 
 {3}
 '''.format(
-                os.path.join(logdir, job_name),
-                job_name, queue, ' '.join(cmd),
-                self.now.strftime("%H:%M:%S %d/%m/%Y"))
+                    os.path.join(logdir, job_name),
+                    job_name, queue, ' '.join(cmd),
+                    self.now.strftime("%H:%M:%S %d/%m/%Y"))
+            )
             mock_sprun.return_value = subprocess.CompletedProcess(
                 expected_cmd, 0,
                 stdout=qsub_out, stderr=None)
@@ -536,9 +552,16 @@ module load mymodule
         self.mocks['fsl_sub_plugin_slurm.method_config'].return_value = mconf_dict
         with self.subTest("With Project"):
             expected_cmd = ['/usr/bin/sbatch']
-            expected_script = '#!' + self.bash + '''
+            expected_script = (
+                '#!' + self.bash + '''
 
-#SBATCH --export=ALL
+#SBATCH --export=ALL,'''
+                '''FSLSUB_JOB_ID_VAR=SLURM_JOB_ID,'''
+                '''FSLSUB_ARRAYTASKID_VAR=SLURM_ARRAY_TASK_ID,'''
+                '''FSLSUB_ARRAYSTARTID_VAR=SLURM_ARRAY_TASK_MIN,'''
+                '''FSLSUB_ARRAYENDID_VAR=SLURM_ARRAY_TASK_MAX,'''
+                '''FSLSUB_ARRAYSTEPSIZE_VAR=SLURM_ARRAY_TASK_STEP,'''
+                '''FSLSUB_ARRAYCOUNT_VAR=SLURM_ARRAY_TASK_COUNT
 #SBATCH -o {0}.o%j
 #SBATCH -e {0}.e%j
 #SBATCH --job-name={1}
@@ -553,9 +576,10 @@ module load mymodule
 
 {4}
 '''.format(
-                os.path.join(logdir, job_name),
-                job_name, queue, project, ' '.join(cmd),
-                self.now.strftime("%H:%M:%S %d/%m/%Y"))
+                    os.path.join(logdir, job_name),
+                    job_name, queue, project, ' '.join(cmd),
+                    self.now.strftime("%H:%M:%S %d/%m/%Y"))
+            )
             mock_sprun.return_value = subprocess.CompletedProcess(
                 expected_cmd, 0,
                 stdout=qsub_out, stderr=None)
@@ -594,7 +618,8 @@ module load mymodule
             mock_cpconf.return_value = w_conf['copro_opts']['cuda']
 
             expected_cmd = ['/usr/bin/sbatch']
-            expected_script = '''#!{0}
+            expected_script = (
+                '''#!{0}
 
 #SBATCH --export=FSLSUB_JOB_ID_VAR=SLURM_JOB_ID,\
 FSLSUB_ARRAYTASKID_VAR=SLURM_ARRAY_TASK_ID',\
@@ -615,11 +640,11 @@ module load mymodule
 
 {4}
 '''.format(
-                self.bash,
-                os.path.join(logdir, job_name),
-                job_name,
-                queue, ' '.join(cmd),
-                self.now.strftime("%H:%M:%S %d/%m/%Y")
+                    self.bash,
+                    os.path.join(logdir, job_name),
+                    job_name,
+                    queue, ' '.join(cmd),
+                    self.now.strftime("%H:%M:%S %d/%m/%Y"))
             )
             mock_sprun.return_value = subprocess.CompletedProcess(
                 expected_cmd, 0,
@@ -662,12 +687,12 @@ module load mymodule
         expected_script = [
             '#!' + self.bash,
             '',
-            '#SBATCH --export=FSLSUB_JOB_ID_VAR,'
-            'FSLSUB_ARRAYTASKID_VAR,'
-            'FSLSUB_ARRAYSTARTID_VAR,'
-            'FSLSUB_ARRAYENDID_VAR,'
-            'FSLSUB_ARRAYSTEPSIZE_VAR,'
-            'FSLSUB_ARRAYCOUNT_VAR',
+            '#SBATCH --export=FSLSUB_JOB_ID_VAR=SLURM_JOB_ID,'
+            'FSLSUB_ARRAYTASKID_VAR=SLURM_ARRAY_TASK_ID,'
+            'FSLSUB_ARRAYSTARTID_VAR=SLURM_ARRAY_TASK_MIN,'
+            'FSLSUB_ARRAYENDID_VAR=SLURM_ARRAY_TASK_MAX,'
+            'FSLSUB_ARRAYSTEPSIZE_VAR=SLURM_ARRAY_TASK_STEP,'
+            'FSLSUB_ARRAYCOUNT_VAR=SLURM_ARRAY_TASK_COUNT',
             '#SBATCH -o {0}.o%j'.format(os.path.join(logdir, job_name)),
             '#SBATCH -e {0}.e%j'.format(os.path.join(logdir, job_name)),
             '#SBATCH --job-name=' + job_name,
@@ -714,7 +739,7 @@ module load mymodule
             self.ww.name,
             os.path.join(
                 os.getcwd(),
-                '_'.join((str(jid), 'wrapper.sh'))
+                '_'.join(('wrapper', str(jid) + '.sh'))
             )
         )
 

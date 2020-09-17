@@ -32,6 +32,7 @@ from fsl_sub.utils import (
     fix_permissions,
     flatten_list,
     writelines_nl,
+    update_envvar_list,
 )
 from .version import PLUGIN_VERSION
 
@@ -199,7 +200,7 @@ def submit(
     '''
 
     logger = _get_logger()
-
+    my_export_vars = list(export_vars)
     if command is None:
         raise BadSubmission(
             "Must provide command line or array task file name")
@@ -245,16 +246,16 @@ def submit(
         if parallel_env:
             command_args.extend(
                 ['--ntasks-per-node', str(threads), ])
-        if mconf.get('copy_environment', False):
-            command_args.append('--export=ALL')
 
         for var, value in array_map.items():
             if not value:
                 value = '""'
-            export_vars.append('='.join((var, value)))
-        if export_vars:
+            update_envvar_list(my_export_vars, '='.join((var, value)))
+        if mconf.get('copy_environment', False):
+            my_export_vars.insert(0, 'ALL')
+        if my_export_vars:
             command_args.append(
-                '='.join(('--export', ','.join(export_vars)))
+                '='.join(('--export', ','.join(my_export_vars)))
             )
 
         if coprocessor is not None:
