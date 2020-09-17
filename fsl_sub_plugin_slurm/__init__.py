@@ -23,6 +23,9 @@ from fsl_sub.config import (
     read_config,
 )
 import fsl_sub.consts
+from fsl_sub.coprocessors import (
+    coproc_get_module
+)
 from fsl_sub.shell_modules import loaded_modules
 from fsl_sub.utils import (
     split_ram_by_slots,
@@ -212,6 +215,8 @@ def submit(
     qsub = qsub_cmd()
     command_args = []
 
+    modules = []
+    mconfig = method_config('slurm')
     if logdir is None:
         logdir = os.getcwd()
     if isinstance(resources, str):
@@ -485,8 +490,14 @@ def submit(
         command_args = command_args if use_jobscript else []
         use_jobscript = True
 
+    if mconfig.get('preserve_modules', True):
+        modules = loaded_modules()
+        if coprocessor_toolkit:
+            cp_module = coproc_get_module(coprocessor, coprocessor_toolkit)
+            if cp_module is not None:
+                modules.append(cp_module)
     js_lines = job_script(
-        command, command_args, extra_lines=extra_lines)
+        command, command_args, modules=modules, extra_lines=extra_lines)
     logger.debug('\n'.join(js_lines))
     if keep_jobscript:
         wrapper_name = write_wrapper(js_lines)
@@ -547,12 +558,10 @@ def write_wrapper(content):
     return wrapper.name
 
 
-def job_script(command, command_args, extra_lines=[]):
+def job_script(command, command_args, modules=[], extra_lines=[]):
     '''Build a job script for 'command' with arguments 'command_args'.
     If p_vars list is provided this is the list of environment variables
     to preserve for the job.'''
-
-    mconfig = method_config('slurm')
 
     bash = bash_cmd()
 
@@ -563,10 +572,8 @@ def job_script(command, command_args, extra_lines=[]):
         else:
             job_def.append('#SBATCH ' + str(cmd))
 
-    if mconfig.get('preserve_modules', True):
-        modules = loaded_modules()
-        for module in modules:
-            job_def.append("module load " + module)
+    for module in modules:
+        job_def.append("module load " + module)
 
     job_def.append(
         "# Built by fsl_sub v.{0} and fsl_sub_plugin_slurm v.{1}".format(
