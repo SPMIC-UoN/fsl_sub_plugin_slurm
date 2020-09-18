@@ -88,16 +88,22 @@ def queue_exists(qname, qtest=None):
         qtest = which('sinfo')
         if qtest is None:
             raise BadSubmission("Cannot find Slurm software")
-    try:
-        output = sp.run(
-            [qtest, '--noheader', '-p', qname],
-            stdout=sp.PIPE,
-            check=True, universal_newlines=True)
-    except sp.CalledProcessError:
-        raise BadSubmission("Cannot run Slurm software")
-    if output.stdout:
-        return True
-    return False
+    found = []
+    for q in qname.split(','):
+        q = q.split('@')[0]
+        try:
+            output = sp.run(
+                [qtest, '--noheader', '-p', qname],
+                stdout=sp.PIPE,
+                check=True, universal_newlines=True)
+        except sp.CalledProcessError:
+            raise BadSubmission("Cannot run Slurm software")
+        if output.stdout:
+            found.append(True)
+    if found:
+        return all(found)
+    else:
+        return False
 
 
 def already_queued():
@@ -416,9 +422,19 @@ def submit(
             '='.join((
                 '--job-name', job_name, ))
         )
+        qlist = []
+        hlist = []
+        for q in queue.split(','):
+            if '@' in q:
+                qname, qhost = q.split('@')
+                qlist.append(qname)
+                hlist.append(qhost)
+            else:
+                qlist.append(q)
 
-        command_args.append('-p ' + queue)
-
+        command_args.append(['-p', ','.join(qlist)])
+        if hlist:
+            command_args.append(['-w', ','.join(hlist), ])
         command_args.append('--parsable')
 
         if requeueable:

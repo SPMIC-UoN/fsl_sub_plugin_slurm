@@ -356,8 +356,7 @@ class TestslurmFinders(unittest.TestCase):
                 )
 
 
-@patch('fsl_sub_plugin_slurm.VERSION', '1.0.0')
-@patch('fsl_sub_plugin_slurm.sys.argv', ['fsl_sub', '-q', 'a.q', './acmd', 'arg1', 'arg2'])
+@patch('fsl_sub.utils.VERSION', '1.0.0')
 @patch(
     'fsl_sub_plugin_slurm.os.getcwd',
     autospec=True, return_value='/Users/testuser')
@@ -380,7 +379,7 @@ class TestSubmit(unittest.TestCase):
         self.config = copy.deepcopy(conf_dict)
         self.mconfig = self.config['method_opts']['slurm']
         self.patch_objects = {
-            'fsl_sub_plugin_slurm.datetime': {'autospec': True, },
+            'fsl_sub.utils.datetime': {'autospec': True, },
             'fsl_sub_plugin_slurm.plugin_version': {'autospec': True, 'return_value': '2.0.0', },
             'fsl_sub_plugin_slurm.loaded_modules': {'autospec': True, 'return_value': ['mymodule', ], },
             'fsl_sub_plugin_slurm.bash_cmd': {'autospec': True, 'return_value': self.bash, },
@@ -402,8 +401,8 @@ class TestSubmit(unittest.TestCase):
 
         for o, p in self.dict_patches.items():
             self.mocks[o] = p.start()
-        self.mocks['fsl_sub_plugin_slurm.datetime'].datetime.now.return_value = self.now
-        self.mocks['fsl_sub_plugin_slurm.datetime'].datetime.strftime = self.strftime
+        self.mocks['fsl_sub.utils.datetime'].datetime.now.return_value = self.now
+        self.mocks['fsl_sub.utils.datetime'].datetime.strftime = self.strftime
         self.addCleanup(patch.stopall)
 
     def TearDown(self):
@@ -470,14 +469,267 @@ module load mymodule
             mock_sprun.return_value = subprocess.CompletedProcess(
                 expected_cmd, 0,
                 stdout=qsub_out, stderr=None)
-            self.assertEqual(
-                jid,
-                self.plugin.submit(
-                    command=cmd,
-                    job_name=job_name,
-                    queue=queue
+            with patch('fsl_sub.utils.sys.argv', ['fsl_sub', '-q', 'a.q', './acmd', 'arg1', 'arg2']):
+                self.assertEqual(
+                    jid,
+                    self.plugin.submit(
+                        command=cmd,
+                        job_name=job_name,
+                        queue=queue
+                    )
+                )
+            mock_sprun.assert_called_once_with(
+                expected_cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                universal_newlines=True,
+                input=expected_script
+            )
+
+    def test_submit_singlehost(
+            self, mock_sprun, mock_cpconf,
+            mock_srbs, mock_qsub,
+            mock_getcwd):
+        job_name = 'test_job'
+        queue = 'a.q@host1'
+        cmd = ['./acmd', 'arg1', 'arg2', ]
+        logdir = os.getcwd()
+        jid = 12345
+        qsub_out = str(jid)
+        with self.subTest("Slurm"):
+            expected_cmd = ['/usr/bin/sbatch']
+            expected_script = (
+                '#!' + self.bash + '''
+
+#SBATCH --export=ALL,'''
+                '''FSLSUB_JOB_ID_VAR=SLURM_JOB_ID,'''
+                '''FSLSUB_ARRAYTASKID_VAR=SLURM_ARRAY_TASK_ID,'''
+                '''FSLSUB_ARRAYSTARTID_VAR=SLURM_ARRAY_TASK_MIN,'''
+                '''FSLSUB_ARRAYENDID_VAR=SLURM_ARRAY_TASK_MAX,'''
+                '''FSLSUB_ARRAYSTEPSIZE_VAR=SLURM_ARRAY_TASK_STEP,'''
+                '''FSLSUB_ARRAYCOUNT_VAR=SLURM_ARRAY_TASK_COUNT
+#SBATCH -o {0}.o%j
+#SBATCH -e {0}.e%j
+#SBATCH --job-name={1}
+#SBATCH -p {2}
+#SBATCH -w {5}
+#SBATCH --parsable
+#SBATCH --requeue
+module load mymodule
+# Built by fsl_sub v.1.0.0 and fsl_sub_plugin_slurm v.2.0.0
+# Command line: fsl_sub -q {6} {3}
+# Submission time (H:M:S DD/MM/YYYY): {4}
+
+{3}
+'''.format(
+                    os.path.join(logdir, job_name),
+                    job_name, 'a.q', ' '.join(cmd),
+                    self.now.strftime("%H:%M:%S %d/%m/%Y"),
+                    'host1',
+                    queue)
+            )
+            mock_sprun.return_value = subprocess.CompletedProcess(
+                expected_cmd, 0,
+                stdout=qsub_out, stderr=None)
+            with patch('fsl_sub.utils.sys.argv', ['fsl_sub', '-q', queue, './acmd', 'arg1', 'arg2']):
+                self.assertEqual(
+                    jid,
+                    self.plugin.submit(
+                        command=cmd,
+                        job_name=job_name,
+                        queue=queue
+                    )
+                )
+            mock_sprun.assert_called_once_with(
+                expected_cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                universal_newlines=True,
+                input=expected_script
+            )
+
+    def test_submit_multiq(
+            self, mock_sprun, mock_cpconf,
+            mock_srbs, mock_qsub,
+            mock_getcwd):
+        job_name = 'test_job'
+        queue = ['a.q', 'b.q', ]
+        cmd = ['./acmd', 'arg1', 'arg2', ]
+        logdir = os.getcwd()
+        jid = 12345
+        qsub_out = str(jid)
+        with self.subTest("Slurm"):
+            expected_cmd = ['/usr/bin/sbatch']
+            expected_script = (
+                '#!' + self.bash + '''
+
+#SBATCH --export=ALL,'''
+                '''FSLSUB_JOB_ID_VAR=SLURM_JOB_ID,'''
+                '''FSLSUB_ARRAYTASKID_VAR=SLURM_ARRAY_TASK_ID,'''
+                '''FSLSUB_ARRAYSTARTID_VAR=SLURM_ARRAY_TASK_MIN,'''
+                '''FSLSUB_ARRAYENDID_VAR=SLURM_ARRAY_TASK_MAX,'''
+                '''FSLSUB_ARRAYSTEPSIZE_VAR=SLURM_ARRAY_TASK_STEP,'''
+                '''FSLSUB_ARRAYCOUNT_VAR=SLURM_ARRAY_TASK_COUNT
+#SBATCH -o {0}.o%j
+#SBATCH -e {0}.e%j
+#SBATCH --job-name={1}
+#SBATCH -p {2}
+#SBATCH --parsable
+#SBATCH --requeue
+module load mymodule
+# Built by fsl_sub v.1.0.0 and fsl_sub_plugin_slurm v.2.0.0
+# Command line: fsl_sub -q {2} {3}
+# Submission time (H:M:S DD/MM/YYYY): {4}
+
+{3}
+'''.format(
+                    os.path.join(logdir, job_name),
+                    job_name, ','.join(queue), ' '.join(cmd),
+                    self.now.strftime("%H:%M:%S %d/%m/%Y"),
                 )
             )
+            mock_sprun.return_value = subprocess.CompletedProcess(
+                expected_cmd, 0,
+                stdout=qsub_out, stderr=None)
+            with patch('fsl_sub.utils.sys.argv', ['fsl_sub', '-q', ','.join(queue), './acmd', 'arg1', 'arg2']):
+                self.assertEqual(
+                    jid,
+                    self.plugin.submit(
+                        command=cmd,
+                        job_name=job_name,
+                        queue=','.join(queue)
+                    )
+                )
+            mock_sprun.assert_called_once_with(
+                expected_cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                universal_newlines=True,
+                input=expected_script
+            )
+
+    def test_submit_multiq_multih(
+            self, mock_sprun, mock_cpconf,
+            mock_srbs, mock_qsub,
+            mock_getcwd):
+        job_name = 'test_job'
+        queue = ['a.q@host1', 'b.q', ]
+        cmd = ['./acmd', 'arg1', 'arg2', ]
+        logdir = os.getcwd()
+        jid = 12345
+        qsub_out = str(jid)
+        with self.subTest("Slurm"):
+            expected_cmd = ['/usr/bin/sbatch']
+            expected_script = (
+                '#!' + self.bash + '''
+
+#SBATCH --export=ALL,'''
+                '''FSLSUB_JOB_ID_VAR=SLURM_JOB_ID,'''
+                '''FSLSUB_ARRAYTASKID_VAR=SLURM_ARRAY_TASK_ID,'''
+                '''FSLSUB_ARRAYSTARTID_VAR=SLURM_ARRAY_TASK_MIN,'''
+                '''FSLSUB_ARRAYENDID_VAR=SLURM_ARRAY_TASK_MAX,'''
+                '''FSLSUB_ARRAYSTEPSIZE_VAR=SLURM_ARRAY_TASK_STEP,'''
+                '''FSLSUB_ARRAYCOUNT_VAR=SLURM_ARRAY_TASK_COUNT
+#SBATCH -o {0}.o%j
+#SBATCH -e {0}.e%j
+#SBATCH --job-name={1}
+#SBATCH -p {6}
+#SBATCH -w {5}
+#SBATCH --parsable
+#SBATCH --requeue
+module load mymodule
+# Built by fsl_sub v.1.0.0 and fsl_sub_plugin_slurm v.2.0.0
+# Command line: fsl_sub -q {7} {3}
+# Submission time (H:M:S DD/MM/YYYY): {4}
+
+{3}
+'''.format(
+                    os.path.join(logdir, job_name),
+                    job_name,
+                    ','.join([q.split('@')[0] for q in queue]),
+                    ' '.join(cmd),
+                    self.now.strftime("%H:%M:%S %d/%m/%Y"),
+                    'host1',
+                    'a.q,b.q',
+                    ','.join(queue)
+                )
+            )
+            mock_sprun.return_value = subprocess.CompletedProcess(
+                expected_cmd, 0,
+                stdout=qsub_out, stderr=None)
+            with patch('fsl_sub.utils.sys.argv', ['fsl_sub', '-q', ','.join(queue), './acmd', 'arg1', 'arg2']):
+                self.assertEqual(
+                    jid,
+                    self.plugin.submit(
+                        command=cmd,
+                        job_name=job_name,
+                        queue=','.join(queue)
+                    )
+                )
+            mock_sprun.assert_called_once_with(
+                expected_cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                universal_newlines=True,
+                input=expected_script
+            )
+
+    def test_submit_multiq_multih2(
+            self, mock_sprun, mock_cpconf,
+            mock_srbs, mock_qsub,
+            mock_getcwd):
+        job_name = 'test_job'
+        queue = ['a.q@host1', 'b.q@host2', ]
+        cmd = ['./acmd', 'arg1', 'arg2', ]
+        logdir = os.getcwd()
+        jid = 12345
+        qsub_out = str(jid)
+        with self.subTest("Slurm"):
+            expected_cmd = ['/usr/bin/sbatch']
+            expected_script = (
+                '#!' + self.bash + '''
+
+#SBATCH --export=ALL,'''
+                '''FSLSUB_JOB_ID_VAR=SLURM_JOB_ID,'''
+                '''FSLSUB_ARRAYTASKID_VAR=SLURM_ARRAY_TASK_ID,'''
+                '''FSLSUB_ARRAYSTARTID_VAR=SLURM_ARRAY_TASK_MIN,'''
+                '''FSLSUB_ARRAYENDID_VAR=SLURM_ARRAY_TASK_MAX,'''
+                '''FSLSUB_ARRAYSTEPSIZE_VAR=SLURM_ARRAY_TASK_STEP,'''
+                '''FSLSUB_ARRAYCOUNT_VAR=SLURM_ARRAY_TASK_COUNT
+#SBATCH -o {0}.o%j
+#SBATCH -e {0}.e%j
+#SBATCH --job-name={1}
+#SBATCH -p {2}
+#SBATCH -w {5}
+#SBATCH --parsable
+#SBATCH --requeue
+module load mymodule
+# Built by fsl_sub v.1.0.0 and fsl_sub_plugin_slurm v.2.0.0
+# Command line: fsl_sub -q {6} {3}
+# Submission time (H:M:S DD/MM/YYYY): {4}
+
+{3}
+'''.format(
+                    os.path.join(logdir, job_name),
+                    job_name, ','.join([q.split('@')[0] for q in queue]),
+                    ' '.join(cmd),
+                    self.now.strftime("%H:%M:%S %d/%m/%Y"),
+                    'host1,host2',
+                    ','.join(queue)
+                )
+            )
+            mock_sprun.return_value = subprocess.CompletedProcess(
+                expected_cmd, 0,
+                stdout=qsub_out, stderr=None)
+            with patch('fsl_sub.utils.sys.argv', ['fsl_sub', '-q', ','.join(queue), './acmd', 'arg1', 'arg2']):
+                self.assertEqual(
+                    jid,
+                    self.plugin.submit(
+                        command=cmd,
+                        job_name=job_name,
+                        queue=','.join(queue)
+                    )
+                )
             mock_sprun.assert_called_once_with(
                 expected_cmd,
                 stdout=subprocess.PIPE,
@@ -533,14 +785,15 @@ module load mymodule
             mock_sprun.return_value = subprocess.CompletedProcess(
                 expected_cmd, 0,
                 stdout=qsub_out, stderr=None)
-            self.assertEqual(
-                jid,
-                self.plugin.submit(
-                    command=cmd,
-                    job_name=job_name,
-                    queue=queue
+            with patch('fsl_sub.utils.sys.argv', ['fsl_sub', '-q', 'a.q', './acmd', 'arg1', 'arg2']):
+                self.assertEqual(
+                    jid,
+                    self.plugin.submit(
+                        command=cmd,
+                        job_name=job_name,
+                        queue=queue
+                    )
                 )
-            )
             mock_sprun.assert_called_once_with(
                 expected_cmd,
                 stdout=subprocess.PIPE,
@@ -583,15 +836,16 @@ module load mymodule
             mock_sprun.return_value = subprocess.CompletedProcess(
                 expected_cmd, 0,
                 stdout=qsub_out, stderr=None)
-            self.assertEqual(
-                jid,
-                self.plugin.submit(
-                    command=cmd,
-                    job_name=job_name,
-                    queue=queue,
-                    project='Aproject'
+            with patch('fsl_sub.utils.sys.argv', ['fsl_sub', '-q', 'a.q', './acmd', 'arg1', 'arg2']):
+                self.assertEqual(
+                    jid,
+                    self.plugin.submit(
+                        command=cmd,
+                        job_name=job_name,
+                        queue=queue,
+                        project='Aproject'
+                    )
                 )
-            )
             mock_sprun.assert_called_once_with(
                 expected_cmd,
                 stdout=subprocess.PIPE,
@@ -649,14 +903,15 @@ module load mymodule
             mock_sprun.return_value = subprocess.CompletedProcess(
                 expected_cmd, 0,
                 stdout=qsub_out, stderr=None)
-            self.assertEqual(
-                jid,
-                self.plugin.submit(
-                    command=cmd,
-                    job_name=job_name,
-                    queue=queue
+            with patch('fsl_sub.utils.sys.argv', ['fsl_sub', '-q', 'a.q', './acmd', 'arg1', 'arg2']):
+                self.assertEqual(
+                    jid,
+                    self.plugin.submit(
+                        command=cmd,
+                        job_name=job_name,
+                        queue=queue
+                    )
                 )
-            )
             mock_sprun.assert_called_once_with(
                 expected_cmd,
                 stdout=subprocess.PIPE,
@@ -712,15 +967,16 @@ module load mymodule
             stdout=qsub_out, stderr=None)
 
         with patch('fsl_sub_plugin_slurm.os.rename') as mock_rename:
-            self.assertEqual(
-                jid,
-                self.plugin.submit(
-                    command=cmd,
-                    job_name=job_name,
-                    queue=queue,
-                    keep_jobscript=True
+            with patch('fsl_sub.utils.sys.argv', ['fsl_sub', '-q', 'a.q', './acmd', 'arg1', 'arg2']):
+                self.assertEqual(
+                    jid,
+                    self.plugin.submit(
+                        command=cmd,
+                        job_name=job_name,
+                        queue=queue,
+                        keep_jobscript=True
+                    )
                 )
-            )
         mock_sprun.assert_called_once_with(
             expected_cmd,
             stdout=subprocess.PIPE,
