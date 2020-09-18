@@ -165,7 +165,7 @@ def submit(
         requeueable=True,
         project=None,
         export_vars=[],
-        keep_jobscript=None):
+        keep_jobscript=False):
     '''Submits the job to a SLURM cluster
     Requires:
 
@@ -259,7 +259,7 @@ def submit(
         keep_jobscript = False
     else:
         use_jobscript = mconf.get('use_jobscript', True)
-        if keep_jobscript is None:
+        if not keep_jobscript:
             keep_jobscript = mconf.get('keep_jobscript', False)
         if keep_jobscript:
             use_jobscript = True
