@@ -448,7 +448,8 @@ class TestSubmit(unittest.TestCase):
                 '''FSLSUB_ARRAYSTARTID_VAR=SLURM_ARRAY_TASK_MIN,'''
                 '''FSLSUB_ARRAYENDID_VAR=SLURM_ARRAY_TASK_MAX,'''
                 '''FSLSUB_ARRAYSTEPSIZE_VAR=SLURM_ARRAY_TASK_STEP,'''
-                '''FSLSUB_ARRAYCOUNT_VAR=SLURM_ARRAY_TASK_COUNT
+                '''FSLSUB_ARRAYCOUNT_VAR=SLURM_ARRAY_TASK_COUNT,'''
+                '''FSLSUB_NSLOTS=SLURM_NPROCS
 #SBATCH -o {0}.o%j
 #SBATCH -e {0}.e%j
 #SBATCH --job-name={1}
@@ -507,7 +508,8 @@ module load mymodule
                 '''FSLSUB_ARRAYSTARTID_VAR=SLURM_ARRAY_TASK_MIN,'''
                 '''FSLSUB_ARRAYENDID_VAR=SLURM_ARRAY_TASK_MAX,'''
                 '''FSLSUB_ARRAYSTEPSIZE_VAR=SLURM_ARRAY_TASK_STEP,'''
-                '''FSLSUB_ARRAYCOUNT_VAR=SLURM_ARRAY_TASK_COUNT
+                '''FSLSUB_ARRAYCOUNT_VAR=SLURM_ARRAY_TASK_COUNT,'''
+                '''FSLSUB_NSLOTS=SLURM_NPROCS
 #SBATCH -o {0}.o%j
 #SBATCH -e {0}.e%j
 #SBATCH --job-name={1}
@@ -569,7 +571,8 @@ module load mymodule
                 '''FSLSUB_ARRAYSTARTID_VAR=SLURM_ARRAY_TASK_MIN,'''
                 '''FSLSUB_ARRAYENDID_VAR=SLURM_ARRAY_TASK_MAX,'''
                 '''FSLSUB_ARRAYSTEPSIZE_VAR=SLURM_ARRAY_TASK_STEP,'''
-                '''FSLSUB_ARRAYCOUNT_VAR=SLURM_ARRAY_TASK_COUNT
+                '''FSLSUB_ARRAYCOUNT_VAR=SLURM_ARRAY_TASK_COUNT,'''
+                '''FSLSUB_NSLOTS=SLURM_NPROCS
 #SBATCH -o {0}.o%j
 #SBATCH -e {0}.e%j
 #SBATCH --job-name={1}
@@ -629,7 +632,8 @@ module load mymodule
                 '''FSLSUB_ARRAYSTARTID_VAR=SLURM_ARRAY_TASK_MIN,'''
                 '''FSLSUB_ARRAYENDID_VAR=SLURM_ARRAY_TASK_MAX,'''
                 '''FSLSUB_ARRAYSTEPSIZE_VAR=SLURM_ARRAY_TASK_STEP,'''
-                '''FSLSUB_ARRAYCOUNT_VAR=SLURM_ARRAY_TASK_COUNT
+                '''FSLSUB_ARRAYCOUNT_VAR=SLURM_ARRAY_TASK_COUNT,'''
+                '''FSLSUB_NSLOTS=SLURM_NPROCS
 #SBATCH -o {0}.o%j
 #SBATCH -e {0}.e%j
 #SBATCH --job-name={1}
@@ -695,7 +699,8 @@ module load mymodule
                 '''FSLSUB_ARRAYSTARTID_VAR=SLURM_ARRAY_TASK_MIN,'''
                 '''FSLSUB_ARRAYENDID_VAR=SLURM_ARRAY_TASK_MAX,'''
                 '''FSLSUB_ARRAYSTEPSIZE_VAR=SLURM_ARRAY_TASK_STEP,'''
-                '''FSLSUB_ARRAYCOUNT_VAR=SLURM_ARRAY_TASK_COUNT
+                '''FSLSUB_ARRAYCOUNT_VAR=SLURM_ARRAY_TASK_COUNT,'''
+                '''FSLSUB_NSLOTS=SLURM_NPROCS
 #SBATCH -o {0}.o%j
 #SBATCH -e {0}.e%j
 #SBATCH --job-name={1}
@@ -764,7 +769,8 @@ module load mymodule
                 '''FSLSUB_ARRAYSTARTID_VAR=SLURM_ARRAY_TASK_MIN,'''
                 '''FSLSUB_ARRAYENDID_VAR=SLURM_ARRAY_TASK_MAX,'''
                 '''FSLSUB_ARRAYSTEPSIZE_VAR=SLURM_ARRAY_TASK_STEP,'''
-                '''FSLSUB_ARRAYCOUNT_VAR=SLURM_ARRAY_TASK_COUNT
+                '''FSLSUB_ARRAYCOUNT_VAR=SLURM_ARRAY_TASK_COUNT,'''
+                '''FSLSUB_NSLOTS=SLURM_NPROCS
 #SBATCH -o {0}.o%j
 #SBATCH -e {0}.e%j
 #SBATCH --job-name={1}
@@ -814,7 +820,8 @@ module load mymodule
                 '''FSLSUB_ARRAYSTARTID_VAR=SLURM_ARRAY_TASK_MIN,'''
                 '''FSLSUB_ARRAYENDID_VAR=SLURM_ARRAY_TASK_MAX,'''
                 '''FSLSUB_ARRAYSTEPSIZE_VAR=SLURM_ARRAY_TASK_STEP,'''
-                '''FSLSUB_ARRAYCOUNT_VAR=SLURM_ARRAY_TASK_COUNT
+                '''FSLSUB_ARRAYCOUNT_VAR=SLURM_ARRAY_TASK_COUNT,'''
+                '''FSLSUB_NSLOTS=SLURM_NPROCS
 #SBATCH -o {0}.o%j
 #SBATCH -e {0}.e%j
 #SBATCH --job-name={1}
@@ -880,7 +887,8 @@ FSLSUB_ARRAYTASKID_VAR=SLURM_ARRAY_TASK_ID',\
 FSLSUB_ARRAYSTARTID_VAR=SLURM_ARRAY_TASK_MIN',\
 FSLSUB_ARRAYENDID_VAR=SLURM_ARRAY_TASK_MAX',\
 FSLSUB_ARRAYSTEPSIZE_VAR=SLURM_ARRAY_TASK_STEP',\
-FSLSUB_ARRAYCOUNT_VAR=SLURM_ARRAY_TASK_COUNT'
+FSLSUB_ARRAYCOUNT_VAR=SLURM_ARRAY_TASK_COUNT',\
+FSLSUB_NSLOTS=SLURM_NPROCS
 #SBATCH -o {1}.o%j
 #SBATCH -e {1}.e%j
 #SBATCH --job-name={2}
@@ -948,6 +956,7 @@ module load mymodule
             'FSLSUB_ARRAYENDID_VAR=SLURM_ARRAY_TASK_MAX,'
             'FSLSUB_ARRAYSTEPSIZE_VAR=SLURM_ARRAY_TASK_STEP,'
             'FSLSUB_ARRAYCOUNT_VAR=SLURM_ARRAY_TASK_COUNT',
+            'FSLSUB_NSLOTS=SLURM_NPROCS',
             '#SBATCH -o {0}.o%j'.format(os.path.join(logdir, job_name)),
             '#SBATCH -e {0}.e%j'.format(os.path.join(logdir, job_name)),
             '#SBATCH --job-name=' + job_name,

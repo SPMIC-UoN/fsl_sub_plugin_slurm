@@ -21,6 +21,9 @@ method_opts:
     thread_ram_divide: False
     # Whether to tell Slurm how much RAM has been specified
     notify_ram_usage: True
+    # Whether to tell Slurm the requested runtime (in minutes)
+    # WARNING, your job will be killed if it exceeds this time
+    set_time_limit: False
     # Whether to enable --usescript option
     script_conf: True
     # Enable Emailing end-user about job status

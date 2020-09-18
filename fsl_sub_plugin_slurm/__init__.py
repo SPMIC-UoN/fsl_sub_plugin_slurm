@@ -17,6 +17,7 @@ from fsl_sub.exceptions import (
 from fsl_sub.config import (
     method_config,
     coprocessor_config,
+    queue_config,
     read_config,
 )
 import fsl_sub.consts
@@ -25,10 +26,12 @@ from fsl_sub.coprocessors import (
 )
 from fsl_sub.shell_modules import loaded_modules
 from fsl_sub.utils import (
+    affirmative,
     split_ram_by_slots,
     human_to_ram,
     parse_array_specifier,
     bash_cmd,
+    find_default_queue,
     fix_permissions,
     flatten_list,
     job_script,
@@ -235,7 +238,19 @@ def submit(
         'FSLSUB_ARRAYENDID_VAR': 'SLURM_ARRAY_TASK_MAX',
         'FSLSUB_ARRAYSTEPSIZE_VAR': 'SLURM_ARRAY_TASK_STEP',
         'FSLSUB_ARRAYCOUNT_VAR': 'SLURM_ARRAY_TASK_COUNT',
+        'FSLSUB_NSLOTS': 'SLURM_NPROCS'
     }
+
+    if queue is None:
+        queue = find_default_queue(queue_config)
+    if type(queue) == str:
+        if ',' in queue:
+            queues = queue.split(',')
+        else:
+            queues = [queue, ]
+    elif type(queue) == list:
+        queues = queue
+    pure_queues = [q.split('@')[0] for q in queues]
 
     gres = []
     if usescript:
@@ -404,7 +419,13 @@ def submit(
                         str(int(mem_in_mb))
                     ))
                 )
-
+        try:
+            no_set_tlimit = (os.environ['FSLSUB_NOTIMELIMIT'] == '1' or affirmative(os.environ['FSLSUB_NOTIMELIMIT']))
+        except Exception:
+            no_set_tlimit = False
+        if jobtime:
+            if mconf['set_time_limit'] and not no_set_tlimit:
+                command_args.append(['-t', jobtime])
         if mconf['mail_support']:
             if mailto:
                 command_args.extend(['-M', mailto, ])
@@ -422,17 +443,14 @@ def submit(
             '='.join((
                 '--job-name', job_name, ))
         )
-        qlist = []
+
         hlist = []
-        for q in queue.split(','):
+        for q in queues:
             if '@' in q:
                 qname, qhost = q.split('@')
-                qlist.append(qname)
                 hlist.append(qhost)
-            else:
-                qlist.append(q)
 
-        command_args.append(['-p', ','.join(qlist)])
+        command_args.append(['-p', ','.join(pure_queues)])
         if hlist:
             command_args.append(['-w', ','.join(hlist), ])
         command_args.append('--parsable')
