@@ -38,6 +38,7 @@ method_opts:
                 - NONE
         mail_mode: a
         map_ram: True
+        set_time_limit: False
         thread_ram_divide: True
         job_priorities: False
         min_priority: 10000
