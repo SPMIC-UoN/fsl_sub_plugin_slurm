@@ -17,7 +17,6 @@ from fsl_sub.exceptions import (
 from fsl_sub.config import (
     method_config,
     coprocessor_config,
-    queue_config,
     read_config,
 )
 import fsl_sub.consts
@@ -31,7 +30,6 @@ from fsl_sub.utils import (
     human_to_ram,
     parse_array_specifier,
     bash_cmd,
-    find_default_queue,
     fix_permissions,
     flatten_list,
     job_script,
@@ -242,7 +240,7 @@ def submit(
     }
 
     if queue is None:
-        queue = find_default_queue(queue_config)
+        raise BadSubmission("Queue not specified")
     if type(queue) == str:
         if ',' in queue:
             queues = queue.split(',')
