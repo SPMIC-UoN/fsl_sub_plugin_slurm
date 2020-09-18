@@ -1,6 +1,10 @@
 #!/usr/bin/env python
 from setuptools import setup, find_packages
-from fsl_sub_plugin_slurm.version import PLUGIN_VERSION
+
+with open('fsl_sub_plugin_slurm/version.py', mode='r') as vf:
+    vl = vf.read().strip()
+
+PLUGIN_VERSION = vl.split(' = ')[1].strip("'")
 
 setup(
     name='fsl_sub_plugin_slurm',
