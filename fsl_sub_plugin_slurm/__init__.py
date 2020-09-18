@@ -88,20 +88,20 @@ def queue_exists(qname, qtest=None):
         qtest = which('sinfo')
         if qtest is None:
             raise BadSubmission("Cannot find Slurm software")
-    found = []
-    for q in qname.split(','):
-        q = q.split('@')[0]
-        try:
-            output = sp.run(
-                [qtest, '--noheader', '-p', qname],
-                stdout=sp.PIPE,
-                check=True, universal_newlines=True)
-        except sp.CalledProcessError:
-            raise BadSubmission("Cannot run Slurm software")
-        if output.stdout:
-            found.append(True)
-    if found:
-        return all(found)
+    if '@' in qname:
+        qlist = []
+        for q in qname.split(','):
+            qlist.append(q.split('@')[0])
+        qname = ','.join(qlist)
+    try:
+        output = sp.run(
+            [qtest, '--noheader', '-p', qname],
+            stdout=sp.PIPE,
+            check=True, universal_newlines=True)
+    except sp.CalledProcessError:
+        raise BadSubmission("Cannot run Slurm software")
+    if output.stdout:
+        return True
     else:
         return False
 
