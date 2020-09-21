@@ -164,7 +164,7 @@ def submit(
         architecture=None,
         requeueable=True,
         project=None,
-        export_vars=[],
+        export_vars=None,
         keep_jobscript=False):
     '''Submits the job to a SLURM cluster
     Requires:
@@ -219,6 +219,11 @@ def submit(
         raise BadSubmission(
             "Internal error: command argument must be a list"
         )
+
+    # Can't just have export_vars=[] in function definition as the list is mutable so subsequent calls
+    # will return the updated list!
+    if export_vars is None:
+        export_vars = []
     mconf = defaultdict(lambda: False, method_config(METHOD_NAME))
     qsub = qsub_cmd()
     command_args = []
