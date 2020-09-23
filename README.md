@@ -65,6 +65,8 @@ In the _method\_opts_ section, a definition for the method _slurm_ needs to be e
 * job\_resources - True/False - does the grid software accept additional job resource specifications? True for Slurm.
 * projects - True/False - does the grid software support accounts for auditing/charging purposes? Typically true for Slurm, but implementation dependent.
 * keep\_wrapper - True/False - whether to preserve the generated wrapper in a file `jobid_wrapper.sh`. This file contains sufficient information to resubmit this job in the future.
+* preseve\_modules - True/False - requires (and will enforce) use_wrapper. Whether to re-load shell modules on the compute node. Required if you have multiple CPU generations and per-generation optimised libraries
+* add_module_paths - List of file system paths to search for modules in addition to the system defined ones. Useful if you have your own shell modules directory but need to allow the compute node to auto-set it's MODULEPATH environment variable (e.g. to a architecture specific folder). Only used when preserve_modules is True.
 
 ##### Coprocessor Configuration
 

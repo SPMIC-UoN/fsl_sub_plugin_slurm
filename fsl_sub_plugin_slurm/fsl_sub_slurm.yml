@@ -50,16 +50,20 @@ method_opts:
     mail_mode: a
     # Whether to support accounts
     projects: True
-    # Do you want to load your currently loaded modules in the cluster job?
-    # If your system uses shell modules to configure environment variables then enable
-    # this.
-    preserve_modules: True
     # Do you want to keep the script used to submit the job to the cluster? The script
     # will include reproducibility information, e.g. date/time submitted, command line
     # specified, version of fsl_sub and grid plugin, environment variables passed/inherited
     # (for systems that must not automatically inherit all variables) and modules loaded
     # (where a system used modules).
     keep_wrapper: True
+    # Do you want to load your currently loaded modules in the cluster job?
+    # If your system uses shell modules to configure environment variables then enable
+    # this.
+    preserve_modules: True
+    # If you are using wrapper scripts and preserving modules and need to add additional
+    # folders to the MODULESPATH environment variable in the job's environment then
+    # add these paths to add_module_paths
+    add_module_paths: []
 # If you need to add to the coprocessor options, do so here, for example, list your co-processor
 # types that need slurm_constraints.
 coproc_opts:

@@ -211,7 +211,7 @@ def submit(
     '''
 
     logger = _get_logger()
-    my_export_vars = list(export_vars)
+
     if command is None:
         raise BadSubmission(
             "Must provide command line or array task file name")
@@ -224,6 +224,8 @@ def submit(
     # will return the updated list!
     if export_vars is None:
         export_vars = []
+    my_export_vars = list(export_vars)
+
     mconf = defaultdict(lambda: False, method_config(METHOD_NAME))
     qsub = qsub_cmd()
     command_args = []
@@ -527,16 +529,18 @@ def submit(
         command_args = command_args if use_jobscript else []
         use_jobscript = True
 
+    modules_paths = None
     if mconf.get('preserve_modules', True):
         modules = loaded_modules()
         if coprocessor_toolkit:
             cp_module = coproc_get_module(coprocessor, coprocessor_toolkit)
             if cp_module is not None:
                 modules.append(cp_module)
+        modules_paths = mconf.get('add_module_paths', [])
     js_lines = job_script(
         command, command_args,
         '#SBATCH', (METHOD_NAME, plugin_version()),
-        modules=modules, extra_lines=extra_lines)
+        modules=modules, extra_lines=extra_lines, modules_paths=modules_paths)
     logger.debug('\n'.join(js_lines))
     if keep_jobscript:
         wrapper_name = write_wrapper(js_lines)
