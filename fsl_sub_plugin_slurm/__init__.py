@@ -229,6 +229,7 @@ def submit(
     mconf = defaultdict(lambda: False, method_config(METHOD_NAME))
     qsub = qsub_cmd()
     command_args = []
+    extra_lines = []
 
     modules = []
     if logdir is None:
@@ -289,7 +290,20 @@ def submit(
         if coprocessor is not None:
             # Setup the coprocessor
             cpconf = coprocessor_config(coprocessor)
-
+            if cpconf.get('set_visible', False):
+                extra_lines.extend([
+                    'if [ -n "$SGE_HGR_gpu" ]',
+                    'then',
+                    '  if [ -z "$CUDA_VISIBLE_DEVICES" ]',
+                    '  then',
+                    '    export CUDA_VISIBLE_DEVICES=${SGE_HGR_gpu// /,}',
+                    '  fi',
+                    '  if [ -z "$GPU_DEVICE_ORDINAL" ]',
+                    '  then',
+                    '    export GPU_DEVICE_ORDINAL=${SGE_HGR_gpu// /,}',
+                    '  fi',
+                    'fi'
+                ])
             if cpconf['classes']:
                 available_classes = cpconf['class_types']
                 if coprocessor_class is None:
@@ -303,7 +317,7 @@ def submit(
                     raise BadSubmission("Unrecognised coprocessor class")
                 if (not coprocessor_class_strict and
                         cpconf['include_more_capable'] and
-                        cpconf['slurm_constraints']):
+                        cpconf.get('slurm_constraints', True)):
                     copro_capability = available_classes[
                         coprocessor_class]['capability']
                     base_list = [
@@ -518,13 +532,12 @@ def submit(
     logger.debug(type(command_args))
     logger.debug(command_args)
 
-    extra_lines = []
     if array_task and not array_specifier:
-        extra_lines = [
+        extra_lines.extend([
             '',
             'the_command=$(sed -n -e "${{SLURM_ARRAY_TASK_ID}}p" {0})'.format(command),
             '',
-        ]
+        ])
         command = ['exec', bash, '-c', '"$the_command"', ]
         command_args = command_args if use_jobscript else []
         use_jobscript = True

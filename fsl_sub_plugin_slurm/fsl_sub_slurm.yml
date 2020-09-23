@@ -70,3 +70,6 @@ coproc_opts:
   cuda:
     # Does the SURLM cluster use constraints to specify GPU types?
     slurm_constraints: True
+    # If you would like CUDA_VISIBLE_DEVICES and GPU_DEVICE_ORDINAL to be set by fsl_sub
+    # set this to True - requires use_jobscript (or array task)
+    set_visible: False

@@ -71,6 +71,7 @@ copro_opts:
         uses_modules: True
         module_parent: cuda
         no_binding: True
+        slurm_constriants: True
 ''')
 mconf_dict = conf_dict['method_opts']['slurm']
 
@@ -910,6 +911,81 @@ module load mymodule
                         job_name=job_name,
                         queue=queue,
                         project='Aproject'
+                    )
+                )
+            mock_sprun.assert_called_once_with(
+                expected_cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                universal_newlines=True,
+                input=expected_script
+            )
+
+        mock_sprun.reset_mock()
+        with self.subTest("With set GPU mask"):
+            w_conf = self.config
+            w_conf['method_opts']['slurm']['projects'] = True
+            w_conf['method_opts']['slurm']['add_module_paths'] = ['/usr/local/shellmodules']
+            w_conf['copro_opts']['cuda']['set_visible'] = True
+            self.mocks['fsl_sub_plugin_slurm.read_config'].return_value = w_conf
+            self.mocks['fsl_sub_plugin_slurm.method_config'].return_value = w_conf['method_opts']['slurm']
+            mock_cpconf.return_value = w_conf['copro_opts']['cuda']
+            expected_cmd = ['/usr/bin/sbatch']
+            expected_script = (
+                '#!' + self.bash + '''
+
+#SBATCH --export=ALL,'''
+                '''FSLSUB_JOB_ID_VAR=SLURM_JOB_ID,'''
+                '''FSLSUB_ARRAYTASKID_VAR=SLURM_ARRAY_TASK_ID,'''
+                '''FSLSUB_ARRAYSTARTID_VAR=SLURM_ARRAY_TASK_MIN,'''
+                '''FSLSUB_ARRAYENDID_VAR=SLURM_ARRAY_TASK_MAX,'''
+                '''FSLSUB_ARRAYSTEPSIZE_VAR=SLURM_ARRAY_TASK_STEP,'''
+                '''FSLSUB_ARRAYCOUNT_VAR=SLURM_ARRAY_TASK_COUNT,'''
+                '''FSLSUB_NSLOTS=SLURM_NPROCS
+#SBATCH --constraint="k80|p100"
+#SBATCH --gres=gpu:1
+#SBATCH -o {0}.o%j
+#SBATCH -e {0}.e%j
+#SBATCH --job-name={1}
+#SBATCH -p {2}
+#SBATCH --parsable
+#SBATCH --requeue
+#SBATCH --account {3}
+MODULEPATH=/usr/local/shellmodules:$MODULEPATH
+module load mymodule
+# Built by fsl_sub v.1.0.0 and fsl_sub_plugin_slurm v.2.0.0
+# Command line: fsl_sub -q {2} {4}
+# Submission time (H:M:S DD/MM/YYYY): {5}
+
+if [ -n "$SGE_HGR_gpu" ]
+then
+  if [ -z "$CUDA_VISIBLE_DEVICES" ]
+  then
+    export CUDA_VISIBLE_DEVICES=${{SGE_HGR_gpu// /,}}
+  fi
+  if [ -z "$GPU_DEVICE_ORDINAL" ]
+  then
+    export GPU_DEVICE_ORDINAL=${{SGE_HGR_gpu// /,}}
+  fi
+fi
+{4}
+'''.format(
+                    os.path.join(logdir, job_name),
+                    job_name, queue, project, ' '.join(cmd),
+                    self.now.strftime("%H:%M:%S %d/%m/%Y"))
+            )
+            mock_sprun.return_value = subprocess.CompletedProcess(
+                expected_cmd, 0,
+                stdout=qsub_out, stderr=None)
+            with patch('fsl_sub.utils.sys.argv', ['fsl_sub', '-q', 'a.q', './acmd', 'arg1', 'arg2']):
+                self.assertEqual(
+                    jid,
+                    self.plugin.submit(
+                        command=cmd,
+                        job_name=job_name,
+                        queue=queue,
+                        project='Aproject',
+                        coprocessor='cuda'
                     )
                 )
             mock_sprun.assert_called_once_with(
