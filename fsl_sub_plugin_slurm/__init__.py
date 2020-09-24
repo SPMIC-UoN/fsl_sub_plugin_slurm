@@ -128,6 +128,19 @@ def squeue_cmd():
     return squeue
 
 
+def qdel(job_id):
+    '''Deletes a job - returns a tuple, output, return code'''
+    scancel = which('scancel')
+    if scancel is None:
+        raise BadSubmission("Cannot find Slurm software")
+    result = sp.run(
+        [scancel, str(job_id), ],
+        universal_newlines=True,
+        stdout=sp.PIPE, stderr=sp.STDOUT
+    )
+    return (result.stdout, result.returncode)
+
+
 def _slurm_option(opt):
     return "#SBATCH " + opt
 

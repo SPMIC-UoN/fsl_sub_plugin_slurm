@@ -1143,6 +1143,30 @@ module load mymodule
             )
         )
 
+
+class TestQdel(unittest.TestCase):
+    @patch('fsl_sub_plugin_slurm.which', autospec=True)
+    @patch('fsl_sub_plugin_slurm.sp.run', autospec=True)
+    def testqdel(self, mock_spr, mock_which):
+        pid = 1234
+        mock_which.return_value = '/usr/bin/scancel'
+        mock_spr.return_value = subprocess.CompletedProcess(
+            ['/usr/bin/cancel', str(pid)],
+            0,
+            'Job ' + str(pid) + ' deleted',
+            ''
+        )
+        self.assertTupleEqual(
+            fsl_sub_plugin_slurm.qdel(pid),
+            ('Job ' + str(pid) + ' deleted', 0)
+        )
+        mock_spr.assert_called_once_with(
+            ['/usr/bin/scancel', str(pid)],
+            universal_newlines=True,
+            stdout=subprocess.PIPE, stderr=subprocess.STDOUT
+        )
+
+
 #     def test_submit_requeueable(
 #             self, mock_sprun, mock_cpconf,
 #             mock_srbs, mock_mconf, mock_qsub,
