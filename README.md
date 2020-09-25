@@ -89,6 +89,7 @@ For each coprocessor hardware type you need a sub-section with an identifier tha
     * capability: An integer defining the feature set of the device, your most basic device should be given the value 1 and more capable devices higher values, e.g. GTX = 1, Kelper = 2, Pascal = 3, Volta = 4.
 * default\_class: The _class selector_ for the class to assign jobs to where a class has not been specified in the fsl\_sub call.
 * set_visible: True/False - Whether to set CUDA_VISIBLE_DEVICES and GPU_DEVICE_ORDINAL automatically based on the Univa Grid Engine SGE_HGR_gpu variable. Only supported on Univa Grid Engine and may not be necessary if the cluster administrator has ensured this is set automatically.
+* presence\_test: The name of a program that can be used to look for this coprocessor type, for example nvidia-smi for CUDA devices. Program needs to return non-zero exit status if there are no available coprocessors.
 
 ##### Queue Definitions
 
