@@ -295,9 +295,28 @@ def submit(
             update_envvar_list(my_export_vars, '='.join((var, value)))
         if mconf.get('copy_environment', False):
             my_export_vars.insert(0, 'ALL')
+
+        my_evars = []
         if my_export_vars:
+            for var in my_export_vars:
+                if '=' in var:
+                    vname, vvalue = var.split('=')
+                    # Check if there is a comma or space in the env-var value, if so add it to my_complex_vars
+                    if any(x in vvalue for x in [',', ' ']):
+
+                        if (
+                                (vvalue.startswith('"') and vvalue.endswith('"'))
+                                or (vvalue.startswith("'") and vvalue.endswith("'"))):
+                            my_evars.append(var)
+                        else:
+                            my_evars.append("{0}='{1}'".format(vname, vvalue))
+                    else:
+                        my_evars.append(var)
+                else:
+                    my_evars.append(var)
+
             command_args.append(
-                '='.join(('--export', ','.join(my_export_vars)))
+                '='.join(('--export', ','.join(my_evars)))
             )
 
         if coprocessor is not None:

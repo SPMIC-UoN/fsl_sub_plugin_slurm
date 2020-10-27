@@ -1064,6 +1064,75 @@ module load mymodule
         )
         mock_sprun.reset_mock()
 
+    def test_submit_wrapper_set_complex_vars(
+            self, mock_sprun, mock_cpconf,
+            mock_srbs, mock_qsub,
+            mock_getcwd):
+        job_name = 'test_job'
+        queue = 'a.q'
+        cmd = ['./acmd', 'arg1', 'arg2', ]
+        logdir = os.getcwd()
+        jid = 12345
+        qsub_out = str(jid)
+        w_conf = self.config
+        w_conf['method_opts']['slurm']['use_jobscript'] = True
+        w_conf['method_opts']['slurm']['copy_environment'] = False
+        self.mocks['fsl_sub_plugin_slurm.read_config'].return_value = w_conf
+        self.mocks['fsl_sub_plugin_slurm.method_config'].return_value = w_conf['method_opts']['slurm']
+        mock_cpconf.return_value = w_conf['copro_opts']['cuda']
+
+        expected_cmd = ['/usr/bin/sbatch']
+        expected_script = (
+            '''#!{0}
+
+#SBATCH --export=AVAR='1,2',BVAR='a b',FSLSUB_JOB_ID_VAR=SLURM_JOB_ID,\
+FSLSUB_ARRAYTASKID_VAR=SLURM_ARRAY_TASK_ID,\
+FSLSUB_ARRAYSTARTID_VAR=SLURM_ARRAY_TASK_MIN,\
+FSLSUB_ARRAYENDID_VAR=SLURM_ARRAY_TASK_MAX,\
+FSLSUB_ARRAYSTEPSIZE_VAR=SLURM_ARRAY_TASK_STEP,\
+FSLSUB_ARRAYCOUNT_VAR=SLURM_ARRAY_TASK_COUNT,\
+FSLSUB_NSLOTS=SLURM_NPROCS
+#SBATCH -o {1}.o%j
+#SBATCH -e {1}.e%j
+#SBATCH --job-name={2}
+#SBATCH -p {3}
+#SBATCH --parsable
+#SBATCH --requeue
+module load mymodule
+# Built by fsl_sub v.1.0.0 and fsl_sub_plugin_slurm v.2.0.0
+# Command line: fsl_sub -q {3} {4}
+# Submission time (H:M:S DD/MM/YYYY): {5}
+
+{4}
+'''.format(
+                self.bash,
+                os.path.join(logdir, job_name),
+                job_name,
+                queue, ' '.join(cmd),
+                self.now.strftime("%H:%M:%S %d/%m/%Y"))
+        )
+        mock_sprun.return_value = subprocess.CompletedProcess(
+            expected_cmd, 0,
+            stdout=qsub_out, stderr=None)
+        with patch('fsl_sub.utils.sys.argv', ['fsl_sub', '-q', 'a.q', './acmd', 'arg1', 'arg2']):
+            self.assertEqual(
+                jid,
+                self.plugin.submit(
+                    command=cmd,
+                    job_name=job_name,
+                    queue=queue,
+                    export_vars=['AVAR=1,2', 'BVAR=a b']
+                )
+            )
+        mock_sprun.assert_called_once_with(
+            expected_cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            universal_newlines=True,
+            input=expected_script
+        )
+        mock_sprun.reset_mock()
+
     def test_submit_wrapper_keep(
             self, mock_sprun, mock_cpconf,
             mock_srbs, mock_qsub,
