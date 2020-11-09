@@ -10,7 +10,7 @@ This fsl\_sub plugin provides support for submitting tasks to SLURM clusters.
 
 ## Requirements
 
-fsl\_sub_plugin_slurm requires Python >=3.5 and fsl\_sub >=2.1.0
+fsl\_sub\_plugin\_slurm requires Python >=3.5 and fsl\_sub >=2.3.0
 
 ## Installation
 
@@ -18,7 +18,7 @@ Where fsl\_sub is to be used outside of the FSL distribution it is recommended t
 
 ### Installation within FSL
 
-FSL ships with fsl\_sub pre-installed but lacking any grid backends. To install this backend use the fsl\_sub_plugin helper script:
+FSL ships with fsl\_sub pre-installed but lacking any grid backends. To install this backend use the fsl\_sub\_plugin helper script:
 
 > $FSLDIR/etc/fslconf/fsl\_sub_plugin -i fsl\_sub_plugin_slurm
 
