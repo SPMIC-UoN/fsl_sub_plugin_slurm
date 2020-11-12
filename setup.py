@@ -33,7 +33,7 @@ setup(
     },
     packages=find_packages(),
     license='FSL License',
-    install_requires=['fsl_sub>=2.3.0', ],
+    install_requires=['fsl_sub>=2.5.3', ],
     python_requires='~=3.5',
     package_data={
         'fsl_sub_plugin_slurm': ['fsl_sub_slurm.yml', 'README.md', 'CHANGES.md'],

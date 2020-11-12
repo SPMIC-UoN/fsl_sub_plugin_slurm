@@ -410,13 +410,13 @@ def submit(
             command_args.append(['-e', logs['e'], ])
 
         hold_state = 'afterok'
-        if array_task and array_hold:
+        if array_task and array_hold is not None:
             if mconf['array_holds']:
                 # Requires Slurm 16.05
-                jobhold = array_hold
+                jobhold = str(array_hold)
                 hold_state = 'aftercorr'
             else:
-                jobhold = array_hold
+                jobhold = str(array_hold)
 
         if jobhold:
             if isinstance(jobhold, (list, tuple, )):
@@ -661,9 +661,9 @@ def job_status(job_id, sub_job_id=None):
         id
         name
         script (if available)
-        arguments (if available)
+        args (if available)
         # sub_state: fsl_sub.consts.NORMAL|RESTARTED|SUSPENDED
-        submission_time
+        sub_time
         tasks (dict keyed on sub-task ID):
             status:
                 fsl_sub.consts.QUEUED
@@ -674,6 +674,8 @@ def job_status(job_id, sub_job_id=None):
             start_time
             end_time
             sub_time
+            wall
+            cpu
             exit_status
             error_message
             maxmemory (in Mbytes)
@@ -696,11 +698,7 @@ def job_status(job_id, sub_job_id=None):
         sub_job_id = int(sub_job_id)
 
     try:
-        job_details = _running_job(job_id, sub_job_id)
-        if job_details:
-            return job_details
-        else:
-            job_details = _finished_job(job_id, sub_job_id)
+        job_details = _job(job_id, sub_job_id=sub_job_id)
 
     except UnknownJobId as e:
         raise
@@ -722,11 +720,9 @@ def _get_sacct(job_id, sub_job_id=None):
             'Submit',
             'Start',
             'End',
-            'UserCPU',
-            'SystemCPU',
             'State',
             'ExitCode',
-            'MaxVMSize')
+        )
         )
     ]
     if sub_job_id is not None:
@@ -770,20 +766,14 @@ def _get_sacct(job_id, sub_job_id=None):
             jid, sjid = (int(jid), int(sjid))
 
         job['id'] = jid
-        job['script'] = None
-        job['arguments'] = None
-        job['submission_time'] = _sacct_datetimestamp(fields[2])
-        job['parents'] = None
-        job['children'] = None
-        job['job_directory'] = None
         job['tasks'] = {}
 
         if sjid not in job['tasks']:
             job['tasks'][sjid] = {}
 
         task = job['tasks'][sjid]
-        task['exit_status'] = int(fields[8].split(':')[0])
-        if task['exit_status'] != 0:
+        exit_status = int(fields[6].split(':')[0])
+        if exit_status != 0:
             task['status'] = fsl_sub.consts.FAILED
         else:
             status = fields[7]
@@ -799,113 +789,14 @@ def _get_sacct(job_id, sub_job_id=None):
                 task['status'] = fsl_sub.consts.FINISHED
             else:
                 task['status'] = fsl_sub.consts.FAILED
-        task['error_message'] = None
-        task['end_time'] = _sacct_datetimestamp(fields[4])
         task['start_time'] = _sacct_datetimestamp(fields[3])
-        task['sub_time'] = _sacct_datetimestamp(fields[2])
-        task['utime'] = _sacct_timestamp_seconds(fields[5])
-        task['stime'] = _sacct_timestamp_seconds(fields[6])
-        # Slurm STATES should be mapped to our status...
+        task['end_time'] = _sacct_datetimestamp(fields[4])
 
         if stage == '':
+            job['sub_time'] = _sacct_datetimestamp(fields[2])
             job['name'] = fields[1]
-        else:
-            task['maxmemory'] = human_to_ram(fields[-1], as_int=False)
 
     return job
-
-
-def _get_squeue(job_id, sub_job_id=None):
-    fn = {
-        'jobid': '%F',
-        'array_id': '%K',
-        'name': '%j',
-        'sub_time': '%V',
-        'start_time': '%S',
-        'end_time': '%e',
-        'command': '%o',
-        'depends': '%E',
-        'state': '%t',
-        'job_directory': '%Z'
-    }
-    # This is untestable as the dictionary order will change each time run.
-    fn_order = list(fn.keys())
-    fn_index = {a: fn_order.index(a) for a in fn.keys()}
-    squeue_args = [
-        '--noheader',
-        '-o',
-        ','.join(fn.order)
-    ]
-
-    if sub_job_id is not None:
-        job = "_".join(str(job_id), str(sub_job_id))
-    else:
-        job = str(job_id)
-    squeue = [squeue_cmd()]
-    squeue.extend(['--jobs=', job])
-    squeue.extend(squeue_args)
-
-    output = None
-    try:
-        squeue_csv = sp.run(
-            squeue,
-            stdout=sp.PIPE,
-            stderr=sp.PIPE,
-            check=True, universal_newlines=True)
-        output = squeue_csv.stdout
-    except FileNotFoundError:
-        raise BadSubmission(
-            "Slurm software may not be correctly installed")
-    except sp.CalledProcessError as e:
-        if "Invalid job id specified" in e.stderr:
-            raise UnknownJobId
-        else:
-            raise GridOutputError(e.stderr)
-
-    if not output:
-        raise UnknownJobId
-
-    jobs = {}
-    for line in output:
-        fields = line.split('|')
-        jid = fields[fn_index('jobid')]
-        sjid = fields[fn_index['array_id']]
-        if jid not in jobs:
-            jobs[jid] = {}
-            jobs[jid]['tasks'] = {}
-
-        if sjid not in jobs[jid]['tasks']:
-            jobs[jid]['tasks'][sjid] = {}
-
-        jobs[jid]['script'] = fields[fn_index['command']]
-        task = jobs[jid]['tasks'][sjid]
-        task['exit_status'] = None
-        status = fields[fn_index['state']]
-        if status == 'RQ':
-            task['status'] = fsl_sub.consts.REQUEUED
-        elif status in ['RD', 'RH']:
-            task['status'] = fsl_sub.consts.HELD
-        elif status == 'S':
-            task['status'] = fsl_sub.consts.SUSPENDED
-        elif status in ['R', 'CG', 'RS']:
-            task['status'] = fsl_sub.consts.RUNNING
-        elif status == 'CF':
-            task['status'] = fsl_sub.consts.STARTING
-        elif status == 'PD':
-            task['status'] = fsl_sub.consts.QUEUED
-        elif status == 'CD':
-            task['status'] = fsl_sub.consts.FINISHED
-        else:
-            task['status'] = fsl_sub.consts.FAILED
-        task['error_message'] = None
-        task['end_time'] = _sacct_datetimestamp(fields[fn_index['end_time']])
-        task['start_time'] = _sacct_datetimestamp(
-            fields[fn_index['start_time']])
-        task['sub_time'] = _sacct_datetimestamp(fields[fn_index['sub_time']])
-        task['utime'] = None
-        task['stime'] = None
-        task['maxmemory'] = None
-    return jobs
 
 
 def _sacct_datetimestamp(output):
@@ -947,12 +838,7 @@ def _get_data(getter, job_id, sub_job_id=None):
     return job_info
 
 
-def _running_job(job_id, sub_job_id=None):
-    job_info = _get_data(_get_squeue, job_id, sub_job_id)
-    return job_info
-
-
-def _finished_job(job_id, sub_job_id=None):
+def _job(job_id, sub_job_id=None):
     job_info = _get_data(_get_sacct, job_id, sub_job_id)
     return job_info
 
