@@ -413,10 +413,10 @@ def submit(
         if array_task and array_hold is not None:
             if mconf['array_holds']:
                 # Requires Slurm 16.05
-                jobhold = str(array_hold)
+                jobhold = array_hold
                 hold_state = 'aftercorr'
             else:
-                jobhold = str(array_hold)
+                jobhold = array_hold
 
         if jobhold:
             if isinstance(jobhold, (list, tuple, )):
