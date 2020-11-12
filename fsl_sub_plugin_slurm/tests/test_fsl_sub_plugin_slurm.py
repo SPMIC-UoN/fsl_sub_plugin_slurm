@@ -17,7 +17,6 @@ from fsl_sub.exceptions import (
 )
 
 conf_dict = yaml.safe_load('''---
-ram_units: G
 method_opts:
     slurm:
         queues: True
@@ -371,7 +370,6 @@ class TestslurmFinders(unittest.TestCase):
 @patch('fsl_sub_plugin_slurm.sp.run', autospec=True)
 class TestSubmit(unittest.TestCase):
     def setUp(self):
-        fsl_sub_plugin_slurm.fsl_sub.config.read_config.cache_clear()
         self.ww = tempfile.NamedTemporaryFile(
             mode='w+t',
             delete=False)
@@ -386,7 +384,6 @@ class TestSubmit(unittest.TestCase):
             'fsl_sub_plugin_slurm.loaded_modules': {'autospec': True, 'return_value': ['mymodule', ], },
             'fsl_sub_plugin_slurm.bash_cmd': {'autospec': True, 'return_value': self.bash, },
             'fsl_sub_plugin_slurm.write_wrapper': {'autospec': True, 'side_effect': self.w_wrapper},
-            'fsl_sub_plugin_slurm.read_config': {'autospec': True, 'return_value': self.config, },
             'fsl_sub_plugin_slurm.method_config': {'autospec': True, 'return_value': self.mconfig, },
         }
         self.patch_dict_objects = {}
@@ -759,7 +756,6 @@ module load mymodule
         with self.subTest("No projects"):
             w_conf = self.config
             w_conf['method_opts']['slurm']['projects'] = True
-            self.mocks['fsl_sub_plugin_slurm.read_config'].return_value = w_conf
             self.mocks['fsl_sub_plugin_slurm.method_config'].return_value = w_conf['method_opts']['slurm']
             expected_cmd = ['/usr/bin/sbatch']
             expected_script = (
@@ -867,7 +863,6 @@ module load mymodule
             w_conf = self.config
             w_conf['method_opts']['slurm']['projects'] = True
             w_conf['method_opts']['slurm']['add_module_paths'] = ['/usr/local/shellmodules']
-            self.mocks['fsl_sub_plugin_slurm.read_config'].return_value = w_conf
             self.mocks['fsl_sub_plugin_slurm.method_config'].return_value = w_conf['method_opts']['slurm']
             expected_cmd = ['/usr/bin/sbatch']
             expected_script = (
@@ -927,7 +922,6 @@ module load mymodule
             w_conf['method_opts']['slurm']['projects'] = True
             w_conf['method_opts']['slurm']['add_module_paths'] = ['/usr/local/shellmodules']
             w_conf['copro_opts']['cuda']['set_visible'] = True
-            self.mocks['fsl_sub_plugin_slurm.read_config'].return_value = w_conf
             self.mocks['fsl_sub_plugin_slurm.method_config'].return_value = w_conf['method_opts']['slurm']
             mock_cpconf.return_value = w_conf['copro_opts']['cuda']
             expected_cmd = ['/usr/bin/sbatch']
@@ -1009,7 +1003,6 @@ fi
         w_conf = self.config
         w_conf['method_opts']['slurm']['use_jobscript'] = True
         w_conf['method_opts']['slurm']['copy_environment'] = False
-        self.mocks['fsl_sub_plugin_slurm.read_config'].return_value = w_conf
         self.mocks['fsl_sub_plugin_slurm.method_config'].return_value = w_conf['method_opts']['slurm']
         mock_cpconf.return_value = w_conf['copro_opts']['cuda']
 
@@ -1077,7 +1070,6 @@ module load mymodule
         w_conf = self.config
         w_conf['method_opts']['slurm']['use_jobscript'] = True
         w_conf['method_opts']['slurm']['copy_environment'] = False
-        self.mocks['fsl_sub_plugin_slurm.read_config'].return_value = w_conf
         self.mocks['fsl_sub_plugin_slurm.method_config'].return_value = w_conf['method_opts']['slurm']
         mock_cpconf.return_value = w_conf['copro_opts']['cuda']
 
@@ -1146,7 +1138,6 @@ module load mymodule
         w_conf = self.config
         w_conf['method_opts']['slurm']['use_jobscript'] = True
         w_conf['method_opts']['slurm']['copy_environment'] = False
-        self.mocks['fsl_sub_plugin_slurm.read_config'].return_value = w_conf
         self.mocks['fsl_sub_plugin_slurm.method_config'].return_value = w_conf['method_opts']['slurm']
         mock_cpconf.return_value = w_conf['copro_opts']['cuda']
 
