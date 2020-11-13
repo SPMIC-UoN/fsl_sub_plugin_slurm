@@ -27,6 +27,7 @@ The configuration for the SLURM plugin is in the _method\_opts_ section, under t
 | Key | Values (default/recommended in bold) | Description |
 | ----|--------|-------------|
 | queues | **True** | Does this method use queues/partitions (should be always be True) |
+| memory\_in\_gb | True/**False** | Whether SLURM reports memory in GB - normally false |
 | copy\_environment | **True**/False | Whether to replicate the environment variables in the shell that called fsl_sub into the job's shell
 | script\_conf | **True**/False | Whether _--usesscript_ option to fsl_sub is available via this method. This option allows you to define the grid options as comments in a shell script and then provide this to the cluster for running. Should be set to True.
 | mail\_support | True/**False** | Whether the grid installation is configured to send email on job events.
