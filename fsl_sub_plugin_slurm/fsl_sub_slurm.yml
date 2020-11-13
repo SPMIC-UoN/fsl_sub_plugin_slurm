@@ -1,7 +1,7 @@
 method_opts:
   slurm:
+    memory_in_gb: False # Is SLURM configured to report/take memory values in GB?
     queues: True # Does this submission method use job queues - normally False only for shell plugin
-    large_job_split_pe: threads # SLURM doesn't use parallel environments - leave this setting allow
     copy_environment: True # Replicate current shell environment to running job. Set this to False where
     # your cluster nodes are different (e.g. different CPU generations) and the cluster
     # is setup to run hardware optimised software. In this case, if you need environment
@@ -21,19 +21,16 @@ method_opts:
       n: # Never email
         - NONE # No mail
     mail_mode: n # Default mail mode from above
-    map_ram: True # Whether to split large memory jobs into shared memory slots
     # If your system is configured with MaxMemPerCPU with accounting
     # then this could be set to False as the system should automatically
     # increase the number of CPUs required to satisfy memory requirements
-    thread_ram_divide: False # Whether to divide up RAM requirements for multi-threaded tasks
-    # Slurm automatically does this is most cases so this should normally be false
     notify_ram_usage: True # Whether to tell Slurm how much RAM has been specified
     set_time_limit: False # Whether to tell Slurm the requested runtime (in minutes)
     # WARNING, your job will be killed if it exceeds this time
     array_holds: True # Array holds supported? - Requires Slurm 16.05+
     array_limit: True # Array limits - is limiting the number of concurrent array tasks supported?
     projects: True # Whether to support accounts (used for accounting/billing)
-    keep_wrapper: False # Do you want to always keep the script used to submit the job to the cluster? The script
+    keep_jobscript: False # Do you want to always keep the script used to submit the job to the cluster? The script
     # will include reproducibility information, e.g. date/time submitted, command line
     # specified, version of fsl_sub and grid plugin, environment variables passed/inherited
     # (for systems that must not automatically inherit all variables) and modules loaded
@@ -46,5 +43,7 @@ method_opts:
     # add these paths to this list
 coproc_opts:
   cuda:
-    slurm_constraints: True # Does the SURLM cluster use constraints to specify GPU types?
-    set_visible: False # If you would like CUDA_VISIBLE_DEVICES and GPU_DEVICE_ORDINAL to be set by fsl_sub set this to True
+    class_constraints: False # Does the SURLM cluster use constraints to specify GPU types rather than
+    # adding it to the GRES? If your cluster instructions say use --constraint (or -C) <class> then set this
+    # to True, if you are told to use --gres gpu:<class>:<qty> then set this to false. If this is False then
+    # --coprocessor.

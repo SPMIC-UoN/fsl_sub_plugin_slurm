@@ -4,6 +4,7 @@ import datetime
 import logging
 import os
 import subprocess as sp
+import yaml
 from collections import defaultdict
 from shutil import which
 
@@ -34,6 +35,7 @@ from fsl_sub.utils import (
     job_script,
     write_wrapper,
     update_envvar_list,
+    YamlIndentDumper,
 )
 from .version import PLUGIN_VERSION
 
@@ -47,26 +49,18 @@ def plugin_version():
 
 def qtest():
     '''Command that confirms method is available'''
-    return qconf_cmd()
+    return _sinfo_cmd()
 
 
-def qconf_cmd():
+def _sinfo_cmd():
     '''Command that queries queue configuration'''
-    qconf = which('scontrol')
+    qconf = which('sinfo')
     if qconf is None:
         raise BadSubmission("Cannot find Slurm software")
     return qconf
 
 
-def qstat_cmd():
-    '''Command that queries queue state'''
-    qstat = which('squeue')
-    if qstat is None:
-        raise BadSubmission("Cannot find Slurm software")
-    return qstat
-
-
-def qsub_cmd():
+def _qsub_cmd():
     '''Command that submits a job'''
     qsub = which('sbatch')
     if qsub is None:
@@ -80,6 +74,22 @@ def _sacctmgr_cmd():
     if sacctmgr is None:
         raise BadSubmission("Cannot find Slurm software")
     return sacctmgr
+
+
+def _sacct_cmd():
+    '''Command that queries job stats'''
+    sacct = which('sacct')
+    if sacct is None:
+        raise BadSubmission("Cannot find Slurm software")
+    return sacct
+
+
+def _squeue_cmd():
+    '''Command that queries running job stats'''
+    squeue = which('squeue')
+    if squeue is None:
+        raise BadSubmission("Cannot find Slurm software")
+    return squeue
 
 
 def queue_exists(qname, qtest=None):
@@ -109,22 +119,6 @@ def queue_exists(qname, qtest=None):
 def already_queued():
     '''Is this a running SLURM job?'''
     return ('SLURM_JOB_ID' in os.environ.keys() or 'SLURM_JOBID' in os.environ.keys())
-
-
-def sacct_cmd():
-    '''Command that queries job stats'''
-    sacct = which('sacct')
-    if sacct is None:
-        raise BadSubmission("Cannot find Slurm software")
-    return sacct
-
-
-def squeue_cmd():
-    '''Command that queries running job stats'''
-    squeue = which('squeue')
-    if squeue is None:
-        raise BadSubmission("Cannot find Slurm software")
-    return squeue
 
 
 def qdel(job_id):
@@ -239,7 +233,7 @@ def submit(
     my_export_vars = list(export_vars)
 
     mconf = defaultdict(lambda: False, method_config(METHOD_NAME))
-    qsub = qsub_cmd()
+    qsub = _qsub_cmd()
     command_args = []
     extra_lines = []
 
@@ -318,69 +312,46 @@ def submit(
                 '='.join(('--export', ','.join(my_evars)))
             )
 
+        def cp_class_item(cp, cpclass, item):
+            return coprocessor_config(cp)['class_types'][cpclass][item]
+
         if coprocessor is not None:
             # Setup the coprocessor
             cpconf = coprocessor_config(coprocessor)
-            if cpconf.get('set_visible', False):
-                extra_lines.extend([
-                    'if [ -n "$SGE_HGR_gpu" ]',
-                    'then',
-                    '  if [ -z "$CUDA_VISIBLE_DEVICES" ]',
-                    '  then',
-                    '    export CUDA_VISIBLE_DEVICES=${SGE_HGR_gpu// /,}',
-                    '  fi',
-                    '  if [ -z "$GPU_DEVICE_ORDINAL" ]',
-                    '  then',
-                    '    export GPU_DEVICE_ORDINAL=${SGE_HGR_gpu// /,}',
-                    '  fi',
-                    'fi'
-                ])
-            if cpconf['classes']:
-                available_classes = cpconf['class_types']
-                if coprocessor_class is None:
-                    coprocessor_class = cpconf['default_class']
 
-                try:
-                    copro_class = available_classes[
-                        coprocessor_class][
-                            'resource']
-                except KeyError:
-                    raise BadSubmission("Unrecognised coprocessor class")
-                if (not coprocessor_class_strict and
-                        cpconf['include_more_capable'] and
-                        cpconf.get('slurm_constraints', True)):
-                    copro_capability = available_classes[
-                        coprocessor_class]['capability']
-                    base_list = [
-                        a for a in cpconf['class_types'].keys() if
-                        cpconf['class_types'][a]['capability'] >=
-                        copro_capability]
-                    copro_class = '|'.join(
-                        [
-                            cpconf['class_types'][a]['resource'] for a in
+            gres_items = [cpconf['resource'], str(coprocessor_multi), ]
+
+            cpclasses = []
+
+            if cpconf.get('classes', False) and coprocessor_class is None:
+                coprocessor_class = cpconf.get('default_class', None)
+                cpclasses.append(cp_class_item(cpconf, coprocessor_class, 'resource'))
+
+            if cpconf.get('classes', False):
+                if cpconf.get('class_constraints', True):
+                    if cpconf.get('include_more_capable', True) and not coprocessor_class_strict:
+                        cp_capability = cp_class_item(cpconf, coprocessor_class, 'capability')
+                        base_list = [
+                            a for a in cpconf['class_types'].keys()
+                            if cpconf['class_types'][a]['capability'] > cp_capability]
+                        [cpclasses.append(
+                            cpconf['class_types'][a]['resource']) for a in
                             sorted(
                                 base_list,
                                 key=lambda x:
                                 cpconf['class_types'][x]['capability'])
-                        ]
-                    )
-                    command_args.append(
-                        '='.join(
-                            ('--constraint', '"{}"'.format(copro_class)))
-                    )
-                    gres.append(
-                        ":".join(
-                            (cpconf['resource'], str(coprocessor_multi))))
+                            if a not in cpclasses]
+                    else:
+                        cpclasses.append(cp_class_item(cpconf, coprocessor_class, 'resource'))
+                    command_args.append('='.join(('--constraint', '"{0}"'.format('|'.join(cpclasses)))))
+                else:
+                    if len(cpclasses) == 1:
+                        gres_items.insert(1, cpclasses[0])
             else:
-                gres.append(
-                    ":".join(
-                        (
-                            cpconf['resource'],
-                            str(coprocessor_multi))
-                    )
-                )
+                if len(cpclasses) == 1:
+                    gres_items.insert(1, cpclasses[0])
 
-        # Job priorities can only be set by admins
+            gres.append(":".join(gres_items))
 
         if resources:
             gres.append(','.join(resources))
@@ -445,7 +416,7 @@ def submit(
 
         if jobram:
             # Slurm defaults to dividing up the task into multiple cpu
-            # request, automatically reducing memory per cpu value
+            # requests, automatically reducing memory per cpu value.
             # However, we have already done this, so we need to
             # reduce the RAM requirements.
 
@@ -729,7 +700,7 @@ def _get_sacct(job_id, sub_job_id=None):
         job = ".".join(str(job_id), str(sub_job_id))
     else:
         job = str(job_id)
-    sacct = [sacct_cmd()]
+    sacct = [_sacct_cmd()]
     sacct.extend(['-j', job])
     sacct.extend(sacct_args)
     output = None
@@ -862,6 +833,220 @@ def project_list():
     return [a[0] for a in accounts_out.stdout.split('|')]
 
 
+def _get_queues(sinfo=None):
+    '''Return list of partition names'''
+    if sinfo is None:
+        sinfo = _sinfo_cmd()
+    try:
+        result = sp.run(
+            [sinfo, '-s', '-h', '-o', '%P', ],
+            stdout=sp.PIPE,
+            stderr=sp.DEVNULL,
+            check=True, universal_newlines=True)
+    except (FileNotFoundError, sp.CalledProcessError, ):
+        raise BadSubmission(
+            "Grid Engine software may not be correctly installed")
+    queues = []
+    default = None
+    for q in result.stdout.splitlines():
+        if '*' in q:
+            q = q.strip('*')
+            default = q
+        queues.append(q)
+
+    return (queues, default)
+
+
+def _get_queue_features(queue, sinfo=None):
+    if sinfo is None:
+        sinfo = _sinfo_cmd()
+
+    features = defaultdict(list)
+    try:
+        result = sp.run(
+            [sinfo, '-p', queue, '-o', '%f', ],
+            stdout=sp.PIPE,
+            stderr=sp.DEVNULL,
+            check=True, universal_newlines=True)
+    except FileNotFoundError:
+        raise BadSubmission(
+            "Grid Engine software may not be correctly installed")
+    except sp.CalledProcessError:
+        raise BadSubmission(
+            "Queue {0} not found!".format(queue))
+    for fl in result.output.splitlines():
+        fs = fl.split(',')
+        for f in fs:
+            feature, value = f.split(':')
+            features[feature].append(value)
+    return features
+
+
+def _get_queue_gres(queue, sinfo=None):
+    if sinfo is None:
+        sinfo = _sinfo_cmd()
+
+    gres = defaultdict(list)
+    try:
+        result = sp.run(
+            [sinfo, '-p', queue, '-o', '%G', ],
+            stdout=sp.PIPE,
+            stderr=sp.DEVNULL,
+            check=True, universal_newlines=True)
+    except FileNotFoundError:
+        raise BadSubmission(
+            "Grid Engine software may not be correctly installed")
+    except sp.CalledProcessError:
+        raise BadSubmission(
+            "Queue {0} not found!".format(queue))
+    for gres_line in result.output.splitlines():
+        grs, _ = gres_line.split('(')
+        gr, name, count = grs.split(':')
+        gres[gr].append((name, count))
+    return gres
+
+
+def _get_queue_info(queue, sinfo=None):
+    '''Return dictionary of queue info'''
+    if sinfo is None:
+        sinfo = _sinfo_cmd()
+    mconfig = method_config(METHOD_NAME)
+    fields = [
+        'CPUs',
+        'MaxCPUsPerNode',
+        'Memory',
+        'Time',
+        'NodeHost',
+    ]
+    sinfo_cmd = [sinfo, '-p', queue, '-h', '-O', ]
+    sinfo_cmd.append(",".join(fields))
+    try:
+        result = sp.run(
+            sinfo_cmd,
+            stdout=sp.PIPE,
+            stderr=sp.DEVNULL,
+            check=True, universal_newlines=True)
+    except FileNotFoundError:
+        raise BadSubmission(
+            "Grid Engine software may not be correctly installed")
+    except sp.CalledProcessError:
+        raise BadSubmission(
+            "Queue {0} not found!".format(queue))
+
+    qvariants = []
+    output = result.stdout
+    conf_lines = output.splitlines()
+    for cl in conf_lines:
+        (cpus, maxcpus, memory, qtime, _) = cl.split()
+        try:
+            maxcpus = int(maxcpus)
+            cpus = max(cpus, maxcpus)
+        except ValueError:
+            pass
+        if not mconfig['memory_in_gb']:
+            memory = memory // 1000  # Memory reported in MB
+        if qtime == "UNLIMITED":
+            qtime = "365-23:59:59"
+        qtime = _day_time_minutes(qtime)
+        qvariants.append((cpus, memory, qtime, ))
+
+    qdef = {'cpus': None, 'memory': None, 'qtime': None, }
+    warnings = {'cpus': None, 'memory': None, 'qtime': None, }
+    for qv in qvariants:
+        cpus, memory, qtime = qv
+        if qdef['cpus'] is not None:
+            if qdef['cpus'] != cpus:
+                warnings['cpus'] = "Partition contains nodes with different numbers of CPUs"
+            if qdef['cpus'] < cpus:
+                qdef['cpus'] = cpus
+        else:
+            qdef['cpus'] = cpus
+        if qdef['memory'] is not None:
+            if qdef['memory'] != memory:
+                warnings['memory'] = (
+                    "Partition contains nodes with different amounts of memory,"
+                    " consider switching on RAM nofitication")
+            if qdef['memory'] < memory:
+                qdef['memory'] = memory
+        else:
+            qdef['memory'] = memory
+        if qdef['qtime'] is not None:
+            if qdef['qtime'] != qtime:
+                warnings['qtime'] = (
+                    "Partition contains nodes with differing maximum run times,"
+                    " consider switching on time notification")
+            if qdef['qtime'] < qtime:
+                qdef['qtime'] = qtime
+        else:
+            qdef['qtime'] = qtime
+
+    return qdef, warnings
+
+
+def _day_time_minutes(dayt):
+    '''Convert D-HH:MM:SS to minutes'''
+    if '-' in dayt:
+        (days, sub_day) = dayt.split('-')
+        days = int(days)
+    else:
+        sub_day = dayt
+        days = 0
+    (hours, minutes, seconds) = sub_day.split(':')
+    hours = int(hours)
+    minutes = int(minutes)
+    seconds = int(seconds)
+
+    if seconds != 0:
+        minutes += 1
+    return days * (24 * 60) + hours * 60 + minutes
+
+
 def build_queue_defs():
-    '''Not currently implemented'''
-    return ''
+    '''Return YAML suitable for configuring queues'''
+    logger = _get_logger()
+
+    try:
+        queue_list, default = _get_queues()
+    except BadSubmission as e:
+        logger.error('Unable to query SLURM: ' + str(e))
+        return ('', [])
+    queues = {}
+    for q in queue_list:
+        qinfo, warnings = _get_queue_info(q)
+        gres = _get_queue_gres(q)
+        features = _get_queue_features(q)
+        queues[qinfo['qname']] = {}
+        qd = queues[qinfo['qname']]
+        qd['warnings'] = list(warnings.values())
+        for coproc_m in ('gpu', 'cuda', 'phi', ):
+            if coproc_m in q:
+                qd['warnings'].append(
+                    "'Quene name looks like it might be a queue supporting co-processors."
+                    " Cannot auto-configure.'"
+                )
+        qd['time'] = qinfo['qtime']
+        qd['max_slots'] = qinfo['cpus']
+        qd['max_size'] = qinfo['memory']
+        qd['slot_size'] = qinfo['memory'] // qinfo['cpus']
+        qd['warnings'].append("Slots size on SLURM is largely irrelevant - setting to memory/CPUs")
+        if 'gpu' in gres.keys():
+            qd['warnings'].append(
+                "Partion has a GRES 'gpu' that might indicate the presence of GPUs")
+            qd['warnings'].append(
+                "'resource' would be 'gpu' and associated classes:quantity would be:")
+            for resource_pair in gres['gpu']:
+                qd['warnings'].append(":".join(resource_pair))
+        gpu_matches = [(k, v) for k, v in features.items() if 'gpu' in k]
+        if gpu_matches:
+            qd['warnings'].append(
+                "Partition has features that look like GPU resources, consider configuring GPUs"
+            )
+            for constraint, options in gpu_matches.items():
+                qd['warnings'].append(
+                    "'resource' would be {0} and associated classes would be {1}".format(constraint, ','.join(options))
+                )
+    yaml_string = '\n'.join(
+        [' ' + a for a in yaml.dump(
+            queues, Dumper=YamlIndentDumper, default_flow_style=False).split('\n')]
+    )
+    return yaml_string

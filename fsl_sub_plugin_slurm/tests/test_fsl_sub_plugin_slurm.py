@@ -19,8 +19,8 @@ from fsl_sub.exceptions import (
 conf_dict = yaml.safe_load('''---
 method_opts:
     slurm:
+        memory_in_gb: False
         queues: True
-        large_job_split_pe: threads
         copy_environment: True
         mail_support: True
         mail_modes:
@@ -36,17 +36,11 @@ method_opts:
             n:
                 - NONE
         mail_mode: a
-        map_ram: True
         set_time_limit: False
-        thread_ram_divide: True
-        job_priorities: False
-        min_priority: 10000
-        max_priority: 0
         array_holds: True
         array_limit: True
-        architecture: False
-        export_vars: []
         preserve_modules: True
+        add_module_paths: []
         keep_jobscript: False
         preserve_modules: True
 copro_opts:
@@ -70,7 +64,7 @@ copro_opts:
         uses_modules: True
         module_parent: cuda
         no_binding: True
-        slurm_constriants: True
+        class_constriant: True
 ''')
 mconf_dict = conf_dict['method_opts']['slurm']
 
@@ -98,33 +92,6 @@ class TestSlurmUtils(unittest.TestCase):
 
 
 class TestslurmFinders(unittest.TestCase):
-    @patch('fsl_sub_plugin_slurm.qconf_cmd', autospec=True)
-    def test_qtest(self, mock_qconf):
-        bin_path = '/usr/bin/scontrol'
-        mock_qconf.return_value = bin_path
-        self.assertEqual(
-            bin_path,
-            fsl_sub_plugin_slurm.qtest()
-        )
-        mock_qconf.assert_called_once_with()
-
-    @patch('fsl_sub_plugin_slurm.which', autospec=True)
-    def test_qconf(self, mock_which):
-        bin_path = '/usr/bin/scontrol'
-        with self.subTest("Test 1"):
-            mock_which.return_value = bin_path
-            self.assertEqual(
-                bin_path,
-                fsl_sub_plugin_slurm.qconf_cmd()
-            )
-        mock_which.reset_mock()
-        with self.subTest("Test 2"):
-            mock_which.return_value = None
-            self.assertRaises(
-                fsl_sub_plugin_slurm.BadSubmission,
-                fsl_sub_plugin_slurm.qconf_cmd
-            )
-
     @patch('fsl_sub_plugin_slurm.which', autospec=True)
     def test_qstat(self, mock_which):
         bin_path = '/usr/bin/squeue'
@@ -132,14 +99,14 @@ class TestslurmFinders(unittest.TestCase):
             mock_which.return_value = bin_path
             self.assertEqual(
                 bin_path,
-                fsl_sub_plugin_slurm.qstat_cmd()
+                fsl_sub_plugin_slurm._squeue_cmd()
             )
         mock_which.reset_mock()
         with self.subTest("Test 2"):
             mock_which.return_value = None
             self.assertRaises(
                 fsl_sub_plugin_slurm.BadSubmission,
-                fsl_sub_plugin_slurm.qstat_cmd
+                fsl_sub_plugin_slurm._squeue_cmd
             )
 
     @patch('fsl_sub_plugin_slurm.which', autospec=True)
@@ -149,14 +116,14 @@ class TestslurmFinders(unittest.TestCase):
             mock_which.return_value = bin_path
             self.assertEqual(
                 bin_path,
-                fsl_sub_plugin_slurm.qsub_cmd()
+                fsl_sub_plugin_slurm._qsub_cmd()
             )
         mock_which.reset_mock()
         with self.subTest("Test 2"):
             mock_which.return_value = None
             self.assertRaises(
                 fsl_sub_plugin_slurm.BadSubmission,
-                fsl_sub_plugin_slurm.qsub_cmd
+                fsl_sub_plugin_slurm._qsub_cmd
             )
 
     @patch('fsl_sub_plugin_slurm.sp.run', autospec=True)
@@ -210,7 +177,7 @@ class TestslurmFinders(unittest.TestCase):
     'fsl_sub_plugin_slurm.os.getcwd',
     autospec=True, return_value='/Users/testuser')
 @patch(
-    'fsl_sub_plugin_slurm.qsub_cmd',
+    'fsl_sub_plugin_slurm._qsub_cmd',
     autospec=True, return_value='/usr/bin/sbatch'
 )
 @patch('fsl_sub_plugin_slurm.split_ram_by_slots', autospec=True)
@@ -602,7 +569,7 @@ module load mymodule
         jid = 12345
         qsub_out = str(jid)
         with self.subTest("No projects"):
-            w_conf = self.config
+            w_conf = copy.deepcopy(self.config)
             w_conf['method_opts']['slurm']['projects'] = True
             self.mocks['fsl_sub_plugin_slurm.method_config'].return_value = w_conf['method_opts']['slurm']
             expected_cmd = ['/usr/bin/sbatch']
@@ -708,7 +675,7 @@ module load mymodule
             )
         mock_sprun.reset_mock()
         with self.subTest("With modules path"):
-            w_conf = self.config
+            w_conf = copy.deepcopy(self.config)
             w_conf['method_opts']['slurm']['projects'] = True
             w_conf['method_opts']['slurm']['add_module_paths'] = ['/usr/local/shellmodules']
             self.mocks['fsl_sub_plugin_slurm.method_config'].return_value = w_conf['method_opts']['slurm']
@@ -765,6 +732,127 @@ module load mymodule
             )
 
         mock_sprun.reset_mock()
+        with self.subTest("GPU without constraints"):
+            w_conf = copy.deepcopy(self.config)
+            w_conf['method_opts']['slurm']['projects'] = True
+            w_conf['method_opts']['slurm']['add_module_paths'] = ['/usr/local/shellmodules']
+            w_conf['copro_opts']['cuda']['class_constraints'] = False
+            self.mocks['fsl_sub_plugin_slurm.method_config'].return_value = w_conf['method_opts']['slurm']
+            mock_cpconf.return_value = w_conf['copro_opts']['cuda']
+            expected_cmd = ['/usr/bin/sbatch']
+            expected_script = (
+                '#!' + self.bash + '''
+
+#SBATCH --export=ALL,'''
+                '''FSLSUB_JOB_ID_VAR=SLURM_JOB_ID,'''
+                '''FSLSUB_ARRAYTASKID_VAR=SLURM_ARRAY_TASK_ID,'''
+                '''FSLSUB_ARRAYSTARTID_VAR=SLURM_ARRAY_TASK_MIN,'''
+                '''FSLSUB_ARRAYENDID_VAR=SLURM_ARRAY_TASK_MAX,'''
+                '''FSLSUB_ARRAYSTEPSIZE_VAR=SLURM_ARRAY_TASK_STEP,'''
+                '''FSLSUB_ARRAYCOUNT_VAR=SLURM_ARRAY_TASK_COUNT,'''
+                '''FSLSUB_NSLOTS=SLURM_NPROCS
+#SBATCH --gres=gpu:k80:1
+#SBATCH -o {0}.o%j
+#SBATCH -e {0}.e%j
+#SBATCH --job-name={1}
+#SBATCH -p {2}
+#SBATCH --parsable
+#SBATCH --requeue
+#SBATCH --account {3}
+MODULEPATH=/usr/local/shellmodules:$MODULEPATH
+module load mymodule
+# Built by fsl_sub v.1.0.0 and fsl_sub_plugin_slurm v.2.0.0
+# Command line: fsl_sub -q {2} {4}
+# Submission time (H:M:S DD/MM/YYYY): {5}
+
+{4}
+'''.format(
+                    os.path.join(logdir, job_name),
+                    job_name, queue, project, ' '.join(cmd),
+                    self.now.strftime("%H:%M:%S %d/%m/%Y"))
+            )
+            mock_sprun.return_value = subprocess.CompletedProcess(
+                expected_cmd, 0,
+                stdout=qsub_out, stderr=None)
+            with patch('fsl_sub.utils.sys.argv', ['fsl_sub', '-q', 'a.q', './acmd', 'arg1', 'arg2']):
+                job_id = self.plugin.submit(
+                    command=cmd,
+                    job_name=job_name,
+                    queue=queue,
+                    project='Aproject',
+                    coprocessor='cuda'
+                )
+                self.assertEqual(jid, job_id)
+            mock_sprun.assert_called_once_with(
+                expected_cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                universal_newlines=True,
+                input=expected_script
+            )
+
+        mock_sprun.reset_mock()
+        mock_sprun.reset_mock()
+        with self.subTest("GPU without constraints"):
+            w_conf = copy.deepcopy(self.config)
+            w_conf['method_opts']['slurm']['projects'] = True
+            w_conf['method_opts']['slurm']['add_module_paths'] = ['/usr/local/shellmodules']
+            w_conf['copro_opts']['cuda']['classes'] = False
+            self.mocks['fsl_sub_plugin_slurm.method_config'].return_value = w_conf['method_opts']['slurm']
+            mock_cpconf.return_value = w_conf['copro_opts']['cuda']
+            expected_cmd = ['/usr/bin/sbatch']
+            expected_script = (
+                '#!' + self.bash + '''
+
+#SBATCH --export=ALL,'''
+                '''FSLSUB_JOB_ID_VAR=SLURM_JOB_ID,'''
+                '''FSLSUB_ARRAYTASKID_VAR=SLURM_ARRAY_TASK_ID,'''
+                '''FSLSUB_ARRAYSTARTID_VAR=SLURM_ARRAY_TASK_MIN,'''
+                '''FSLSUB_ARRAYENDID_VAR=SLURM_ARRAY_TASK_MAX,'''
+                '''FSLSUB_ARRAYSTEPSIZE_VAR=SLURM_ARRAY_TASK_STEP,'''
+                '''FSLSUB_ARRAYCOUNT_VAR=SLURM_ARRAY_TASK_COUNT,'''
+                '''FSLSUB_NSLOTS=SLURM_NPROCS
+#SBATCH --gres=gpu:1
+#SBATCH -o {0}.o%j
+#SBATCH -e {0}.e%j
+#SBATCH --job-name={1}
+#SBATCH -p {2}
+#SBATCH --parsable
+#SBATCH --requeue
+#SBATCH --account {3}
+MODULEPATH=/usr/local/shellmodules:$MODULEPATH
+module load mymodule
+# Built by fsl_sub v.1.0.0 and fsl_sub_plugin_slurm v.2.0.0
+# Command line: fsl_sub -q {2} {4}
+# Submission time (H:M:S DD/MM/YYYY): {5}
+
+{4}
+'''.format(
+                    os.path.join(logdir, job_name),
+                    job_name, queue, project, ' '.join(cmd),
+                    self.now.strftime("%H:%M:%S %d/%m/%Y"))
+            )
+            mock_sprun.return_value = subprocess.CompletedProcess(
+                expected_cmd, 0,
+                stdout=qsub_out, stderr=None)
+            with patch('fsl_sub.utils.sys.argv', ['fsl_sub', '-q', 'a.q', './acmd', 'arg1', 'arg2']):
+                job_id = self.plugin.submit(
+                    command=cmd,
+                    job_name=job_name,
+                    queue=queue,
+                    project='Aproject',
+                    coprocessor='cuda'
+                )
+                self.assertEqual(jid, job_id)
+            mock_sprun.assert_called_once_with(
+                expected_cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                universal_newlines=True,
+                input=expected_script
+            )
+
+        mock_sprun.reset_mock()
         with self.subTest("With set GPU mask"):
             w_conf = self.config
             w_conf['method_opts']['slurm']['projects'] = True
@@ -799,17 +887,6 @@ module load mymodule
 # Command line: fsl_sub -q {2} {4}
 # Submission time (H:M:S DD/MM/YYYY): {5}
 
-if [ -n "$SGE_HGR_gpu" ]
-then
-  if [ -z "$CUDA_VISIBLE_DEVICES" ]
-  then
-    export CUDA_VISIBLE_DEVICES=${{SGE_HGR_gpu// /,}}
-  fi
-  if [ -z "$GPU_DEVICE_ORDINAL" ]
-  then
-    export GPU_DEVICE_ORDINAL=${{SGE_HGR_gpu// /,}}
-  fi
-fi
 {4}
 '''.format(
                     os.path.join(logdir, job_name),
@@ -820,16 +897,14 @@ fi
                 expected_cmd, 0,
                 stdout=qsub_out, stderr=None)
             with patch('fsl_sub.utils.sys.argv', ['fsl_sub', '-q', 'a.q', './acmd', 'arg1', 'arg2']):
-                self.assertEqual(
-                    jid,
-                    self.plugin.submit(
-                        command=cmd,
-                        job_name=job_name,
-                        queue=queue,
-                        project='Aproject',
-                        coprocessor='cuda'
-                    )
+                job_id = self.plugin.submit(
+                    command=cmd,
+                    job_name=job_name,
+                    queue=queue,
+                    project='Aproject',
+                    coprocessor='cuda'
                 )
+                self.assertEqual(jid, job_id)
             mock_sprun.assert_called_once_with(
                 expected_cmd,
                 stdout=subprocess.PIPE,
@@ -1146,7 +1221,7 @@ class TestJobStatus(unittest.TestCase):
             '''2018-06-05T09:44:08|00:00:00|00:00.004|COMPLETED|0:0|202.15M
 ''')
 
-    @patch('fsl_sub_plugin_slurm.sacct_cmd', return_value='/usr/bin/sacct')
+    @patch('fsl_sub_plugin_slurm._sacct_cmd', return_value='/usr/bin/sacct')
     def test_job_status(self, mock_qacct):
         self.maxDiff = None
         with patch('fsl_sub_plugin_slurm.sp.run', autospec=True) as mock_sprun:
