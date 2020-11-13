@@ -3,6 +3,8 @@
 ## 1.3.3
 
 * Documentation clean up
+* Changed options for SLURM GPU constraints
+* Add support for auto-configuring partitions
 
 ## 1.3.2
 
