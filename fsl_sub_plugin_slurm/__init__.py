@@ -943,6 +943,7 @@ def _get_queue_info(queue, sinfo=None):
             cpus = max(cpus, maxcpus)
         except ValueError:
             pass
+        memory = int(memory)
         if not mconfig['memory_in_gb']:
             memory = memory // 1000  # Memory reported in MB
         if qtime == "UNLIMITED":
