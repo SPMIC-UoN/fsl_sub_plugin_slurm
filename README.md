@@ -1,4 +1,4 @@
-# fsl\_sub_plugin_slurm
+# fsl_sub_plugin_slurm
 
 Job submission to SLURM variant cluster queues.
 _Copyright 2018-2020, University of Oxford (Duncan Mortimer)_
@@ -8,154 +8,90 @@ _Copyright 2018-2020, University of Oxford (Duncan Mortimer)_
 fsl\_sub provides a consistent interface to various cluster backends, with a fall back to running tasks locally where no cluster is available.
 This fsl\_sub plugin provides support for submitting tasks to SLURM clusters.
 
-## Requirements
+For installation instructions please see INSTALL.md; for building packages see BUILD.md.
 
-fsl\_sub\_plugin\_slurm requires Python >=3.5 and fsl\_sub >=2.3.0
+## Configuration
 
-## Installation
+Use the command:
 
-Where fsl\_sub is to be used outside of the FSL distribution it is recommended that it is installed within a Conda or virtual environment.
+> fsl_sub_config slurm > fsl_sub.yml
 
-### Installation within FSL
+to generate an example configuration, including queue definitions gleaned from the SLURM software - check these, paying attention to any warnings generated.
 
-FSL ships with fsl\_sub pre-installed but lacking any grid backends. To install this backend use the fsl\_sub\_plugin helper script:
+Use the fsl_sub.yml file as per the main fsl_sub documentation.
 
-> $FSLDIR/etc/fslconf/fsl\_sub_plugin -i fsl\_sub_plugin_slurm
+The configuration for the SLURM plugin is in the _method\_opts_ section, under the key _slurm_.
 
-### Installing plugins
+### Method options
 
-If you only need to run programs locally, fsl\_sub ships with a local job plugin, but if you wish to target a grid backend you need to install an appropriate plugin. To install this plugin, ensure your environment is activated and then install the plugin with:
+| Key | Values (default/recommended in bold) | Description |
+| ----|--------|-------------|
+| queues | **True** | Does this method use queues/partitions (should be always be True) |
+| copy\_environment | **True**/False | Whether to replicate the environment variables in the shell that called fsl_sub into the job's shell
+| script\_conf | **True**/False | Whether _--usesscript_ option to fsl_sub is available via this method. This option allows you to define the grid options as comments in a shell script and then provide this to the cluster for running. Should be set to True.
+| mail\_support | True/**False** | Whether the grid installation is configured to send email on job events.
+| mail\_modes | Dictionary of option lists | If the grid has email notifications turned on, this option configures the submission options for different verbosity levels, 'b' = job start, 'e' = job end, 'a' = job abort, 'f' = all events, 'n' = no mail. Each event type should then have a list of submission mail arguments that will be applied to the submitted job. Typically, these should not be edited.
+| mail\_mode | b/e/a/f/**n** | Which of the above mail_modes to use by default
+| notify\_ram\_usage | **True**/False | Whether to notify SLURM of the RAM you have requested. SLURM is typically configured to give jobs a small RAM allocation so you will invariably need this set to true.
+| set\_time\_limit | True/**False** | Whether to notify Grid Engine of the expected *maximum* run-time of your job. This helps the scheduler fill in reserved slots (for e.g. parallel environment jobs), however, this time limit will be enforced, resulting in a job being killed if it is exceeded, even if this is less than the queue run-time limit. This can be disabled on a per-job basis by setting the environment variable FSLSUB_NOTIMELIMIT to '1' (or 'True').
+| array\_holds | **True**/False | Enable support array holds, e.g. sub-task 1 waits for parent sub-task 1.
+| array\_limit | **True**/False | Enable limiting number of concurrent array tasks.
+| job\_resources | **True**/False | Enable additional job resource specification support.
+| projects | **True**/False | Enable support for projects typically used auditing/charging purposes.
+| preseve\_modules | **True**/False | Requires (and will enforce) use_jobscript. Whether to re-load shell modules on the compute node. Required if you have multiple CPU generations and per-generation optimised libraries configured with modules.
+| add_module_paths | **[]**/ a list | List of file system paths to search for modules in addition to the system defined ones. Useful if you have your own shell modules directory but need to allow the compute node to auto-set it's MODULEPATH environment variable (e.g. to a architecture specific folder). Only used when preserve_modules is True.
+| export\_vars | **[]**/List | List of environment variables that should transfered with the job to the compute node
+| keep\_jobscript | True/**False** | Whether to preserve the generated wrapper in a file `jobid_wrapper.sh`. This file contains sufficient information to resubmit this job in the future.
 
-#### virtualenv
+### Coprocessor Configuration
 
-> pip install git+ssh://git@git.fmrib.ox.ac.uk/fsl/fsl\_sub_plugin_slurm.git
+This plugin is not capable of automatically determining all the necessary information to configure your co-processors. SLURM typically selects GPU resources with a GRES (Generic RESource) that defines the type and quantity of the co-processor. Where multiple classes of co-processor are available this might be selectable via the GRES or you may need to provide a _constraint_. If you would like to be able to support running on a class and all superior devices you need to be able to use constraints as GRES requests do not support logical combinations. The automatically generated configuration should include useful information about your GRES and constraints, but should you wish to obtain this information yourself use the commands:
 
-#### conda
+* `sinfo -p <partition> -o %G` - This will list all the GRES defined on \<partition>.
+* `sinfo -p <partition> -o %f` - This will list all features selectable by a `--constraint` as a comma-separated list.
 
-> conda install fsl\_sub_plugin_slurm
+Typically CUDA resources will be controlled using GRES or constraints with _gpu_ in the name, so look for these.
 
-### Configuration
+For each coprocessor hardware type you need a sub-section given an identifier than will be used to request this type of coprocessor. For CUDA processors this sub-section *must* be called 'cuda' to ensure that FSL tools can auto-detect and use CUDA hardware/queues.
 
-A configuration file in YAML format is required to describe your cluster environment, an example configuration can be generated with:
+| Key | Values (default/recommended in bold) | Description |
+| ----|--------|-------------|
+| resource| String | GRES that, when requested, selects machines with the hardware present, e.g. _gpu_. |
+| classes | True/**False** | Whether more than one type of this co-processor is available |
+| include\_more\_capable | **True**/False | Whether to automatically request all classes that are more capable than the requested class. This requires the _class\_constraints_ option to be set to True and for your SLURM cluster to be set up with GPU features/constraints |
+| class\_types | Configuration dictionary | This contains the definition of the GPU classes... |
+| | _Key_ | |
+| | class selector | This is the letter (or word) that is used to select this class of co-processor from the fsl\_sub commandline. For CUDA devices you may consider using the card name e.g. A100.|
+| | resource | This is the name of the Grid Engine 'complex' that will be used to select this GPU family, you can look for possible values with `qconf -sc <hostname>` (it's normally _gputype_).
+| | doc | The description that appears in the fsl\_sub help text about this device.
+| | capability | An integer defining the feature set of the device, your most basic device should be given the value 1 and more capable devices higher values, e.g. GTX = 1, Kelper = 2, Pascal = 3, Volta = 4.
+| default\_class | _Class type key_ | The _class selector_ for the class to assign jobs to where a class has not been specified in the fsl\_sub call. For FSL tools that automatically submit to CUDA queues you should aim to select one that has good double-precision performance (K40|80, P100, V100, A100) and ensure all higher capability devices also have good double-precision.
+| class\_constraints | **True**/False | Whether your SLURM cluster is configured with co-processor selection features. If so this should be set to true and the co-processor _resource_ and class _resource_ strings set appropriately to match the available values. |
+| presence\_test | _Program path_ (**nvidia-smi** for CUDA) | The name of a program that can be used to look for this coprocessor type, for example nvidia-smi for CUDA devices. Program needs to return non-zero exit status if there are no available coprocessors.
 
-> fsl\_sub_config slurm > fsl\_sub.yml
+### Queue Definitions
 
-This configuration file can be copied to _fsldir_/etc/fslconf (calling it fsl\_sub.yml), or put in your home folder calling it .fsl\_sub.yml. A copy in your home folder will override the file in _fsldir_/etc/fslconf.
+Slurm refers to queues as partitions. The example configuration should contain definitions for the automatically discovered partitions but you should review these, in particular any warnings generated.
+To query SLURM for queue information you can use the following SLURM commands.
 
-Finally, the environment variable FSLSUB_CONF can be set to point at the location of this configuration file, this will override all other files.
+To get a list of all available partitions use:
 
-#### Plugin Configuration Sections
-
-In the _method\_opts_ section, a definition for the method _slurm_ needs to be edited/added.
-
-##### Method options
-
-* queues: True/False - does this method use queues/partitions (should be True)
-* large\_job\_split_pe: - not used for slurm so leave as the default
-* copy_environment: True/False - whether to replicate the environment variables in the shell that called fsl\_sub into the job's shell
-* script\_conf: True/False - whether _--usesscript_ option to fsl\_sub is available via this method. This option allows you to define the slurm options as comments in a shell script and then provide this to the cluster for running. Should be set to True.
-* mail\_support: True/False - whether the slurm installation is configured to send email on job events.
-* mail\_modes: If the grid has email notifications turned on, this option configures the submission options for different verbosity levels, 'b' = job start, 'e' = job end, 'a' = job abort, 'f' = all events, 'n' = no mail. Each event type should then have a list of submission mail arguments that will be applied to the submitted job. Typically, these should not be edited.
-* mail\_mode: Which of the above mail_modes to use by default
-* map\_ram: True/False - if a job requests more RAM than is available in any one queue whether fsl\_sub should request sufficient cpus to achieve this memory request, e.g. if your maximum slot size is 16GB and you request 64GB if this option is on then fsl\_sub will request four cpus. As a side-effect your job will now be free to use four threads.
-* thread\_ram\_divide: True/False - If you have requested a multi-threaded job, does Slurm expect you to specify the appropriate fraction of the total memory required (True) or the total memory of the task (False). For Slurm this should normally be left at False.
-* notify\_ram\_usage: True/False - Whether to notify Slurm of the RAM you have requested. Advising the grid software of your RAM requirements can help with scheduling or may be used for special features (such as RAM disks). Use this to control whether fsl\_sub passes on your RAM request to the scheduler.
-* array\_holds: True/False - does grid software support array holds, e.g. sub-task 1 waits for parent sub-task 1. True for Slurm > 16.05
-* array\_limit - True/False - does grid software support limiting number of sub-tasks running concurrently. True Slurm.
-* job\_resources - True/False - does the grid software accept additional job resource specifications? True for Slurm.
-* projects - True/False - does the grid software support accounts for auditing/charging purposes? Typically true for Slurm, but implementation dependent.
-* keep\_wrapper - True/False - whether to preserve the generated wrapper in a file `jobid_wrapper.sh`. This file contains sufficient information to resubmit this job in the future.
-* preseve\_modules - True/False - requires (and will enforce) use_wrapper. Whether to re-load shell modules on the compute node. Required if you have multiple CPU generations and per-generation optimised libraries
-* add_module_paths - List of file system paths to search for modules in addition to the system defined ones. Useful if you have your own shell modules directory but need to allow the compute node to auto-set it's MODULEPATH environment variable (e.g. to a architecture specific folder). Only used when preserve_modules is True.
-
-##### Coprocessor Configuration
-
-This section defines what coprocessors are available in your cluster. This would typically be used to inform fsl\_sub of CUDA resources. By default it is commented out, but if you have CUDA capable hardware present on your cluster then uncomment this section to enable the coprocessor submission options.
-
-For each coprocessor hardware type you need a sub-section with an identifier than will be used to request this type of coprocessor, e.g. _cuda_. Then in the sub-section there are the following options:
-
-* resource: GRES resource that, when requested, selects machines with the hardware present. For CUDA/GPU hardware this is normally _gpu_. You can get the name of this for each partition with the command (resource appears after the comma):
-  > sinfo -a -o "%P,%G"
-* classes: True/False - does the cluster contain (and differentiate between) multiple classes of coprocessor, e.g. Kepler, Pascal and Volta Tesla devices.
-* include_more_capable: True/False - Whether to limit to the exact class specifed (False) or allow running on higher capability devices (True) by default. The user can override this setting.
-* uses_modules: True/False - Is the coprocessor configured using a shell module?
-* module\_parent: If you use shell modules, what is the name of the parent module? e.g. _cuda_ if you have a module folder _cuda_ with module files within for the various CUDA versions.
-* slurm\_constraints: True/False - Does your Slurm install use _constraints_ to specify GPU types? Defaults to True
-* class_types: This contains the definition of the GPU classes...
-  * class selector: This is the letter (or word) that is used to select this class of co-processor from the fsl\_sub commandline. In the case of CUDA GPUs it should be the letter designating the GPU family, e.g. K, P or V.
-    * resource: This is the constraint name that will be used to select this GPU family, you can get the available options with the command (constraint appears after the comma)
-      > sinfo -a -o "%P,%f"
-    * doc: The description that appears in the fsl\_sub help text about this device
-    * capability: An integer defining the feature set of the device, your most basic device should be given the value 1 and more capable devices higher values, e.g. GTX = 1, Kelper = 2, Pascal = 3, Volta = 4.
-* default\_class: The _class selector_ for the class to assign jobs to where a class has not been specified in the fsl\_sub call.
-* set_visible: True/False - Whether to set CUDA_VISIBLE_DEVICES and GPU_DEVICE_ORDINAL automatically based on the Univa Grid Engine SGE_HGR_gpu variable. Only supported on Univa Grid Engine and may not be necessary if the cluster administrator has ensured this is set automatically.
-* presence\_test: The name of a program that can be used to look for this coprocessor type, for example nvidia-smi for CUDA devices. Program needs to return non-zero exit status if there are no available coprocessors.
-
-##### Queue Definitions
-
-Slurm refers to queues as partitions. To determine the information necessary to configure the partition definitions you can use the following tools:
-
-Each queue is defined in a YAML dictionary, keyed on the name of the partition. To get a list of all available partitions use:
-
-> sinfo -s
-
-The partition names are given in the first column.
+> sinfo -s -o %P
 
 Then the details for a queue can be obtained with:
 
-> sinfo -p _partitionname_ -Nel
+> sinfo -p _partitionname_ -O 'CPUs,MaxCPUsPerNode,Memory,Time,NodeHost'
 
-This will return details for every node within that partition.
+This will return details for every node within that partition. The queue definition should then be setup as follows:
 
-> sinfo -p _partitionname_ --long
+| Key | Value type | Description
+|-----|------------|-------------|
+| time | integer in minutes | The _TIMELIMIT_ column reports in days-hours:minutes:seconds, this needs converting to minutes. Provide the maximum value observed, but if there are multiple values you should consider enabling job time notification so that SLURM can select the correct node.||
+| max\_size | integer in GB | This is the maximum permitted memory on a node. This is usually reported by SLURM in MB, so for example 63000 should be configured as 63 (GB). It is equal to the maximum _MEMORY_ value reported. Once again, if there are multiple node types you should turn on RAM nofitication so that nodes can be correctly selected.
+| max\_slots | _CPU_ contains the number of CPUs (threads) available on each node. Set this option to the maximum number reported. |
+| slot\_size | integer in GB | This is largely meaningless on SLURM but should be set to _max\_size_/_max\_slots_. This is probably best set to the smallest such ratio. |
+| group | integer | All partitions with the same group number will be considered together when scheduling, typically this would be all queues with the same run time but differing memory/core counts.|
 
-This will give a summary of the nodes available on the queue and provides job limit information.
+#### Compound Queues
 
-The settings for the queue can be found in the following partition properties:
-
-* time: _TIMELIMIT_ reports in days-hours:minutes:seconds, this needs converting to minutes (from the _--long_ output)
-* slot\_size: This is the maximum permitted memory per thread (cpu/core) converted to units specified in the main configuration for fsl\_sub. This is usually reported in MB, so for example 63000 should be configured as 63 if you have configured fsl\_sub to expect GB. It is equal to the total memory (_MEMORY_) of a node divided by the number of cores (_CPUS_). Where a partition has nodes of differing memory size specify the largest figure and ensure that you have _notify\_ram\_usage_ turned on so that Slurm can auto-select the node based on your RAM request.
-* max\_slots: _CPU_ contains the number of CPUs (threads) available on each node. Set this option to the maximum number reported.
-* group: An integer that allows grouping similar queues together, all queues in the same group will be candidates for a job that matches their capabilities
-* priority: An integer that specifies an order for queues within a group, smaller = higher priority.
-* map\_ram: Whether to automatically submit large jobs as multiple threads to achieve the memory requested.
-
-The final property _max\_size_ is the maximum requestable RAM by a job. This should be set to the smaller of (a) the maximum size for the _MEMORY_ property for hosts in this partition, (b) the number after the _-_ in the _JOB\_SIZE_ field in the _--long_ output (if this is _infinite_ then use the _MEMORY_ property).
-
-If the queue is a coprocessor queue then you need to provide the following additional properties in a dictionary called _copros_, with sub-dictionaries keys on the coprocessor name this queue provides.
-The information necessary to configure this can be obtained with this command:
-
-> sinfo -a -o "%P,%G,%f"
-
-This returns the partition name, resource and constraint for each unique combination of the three options. Using this information complete these configuration options:
-
-* max\_quantity: an integer representing the maximum number of this coprocessor type available on a single compute node. For each partition, this is the number after the ":" in the resource field. Where there are multiple definitions for a partition with the same constraint (e.g. 2x K80 on some nodes, 4x K80 on others) use the higher of the two quantities.
-* classes: a list of coprocessor classes (as defined in the coprocessor configuration section) that this queue has hardware for. This is the constraint field, list all that appear in lines associated with this partition e.g:
-
-~~~yaml
-  copros:
-    cuda:
-       max_quantity: 2
-       classes:
-         - K
-         - P
-~~~
-
-## Building
-
-Prepare the source distribution
-
-> python setup.py sdist
-
-To build a wheel you need to install wheel into your Python build environment
-
-> pip install wheel
-
-fsl\_sub is only compatible with python 3 so you will be building a Pure Python Wheel
-
-> python setup.py bdist_wheel
-
-To build a conda package:
-
-> cd condaRecipies
-> conda-build ..
+Some clusters may be configured with multiple variants of the same partition, e.g. short.a, short.b, with each queue having different hardware, perhaps CPU generation or maximum memory or memory available per slot. To maximise scheduling options you can define compound queues which have the configuration of the least capable constituent. To define a compound queue, the queue name (key of the YAML dictionary) should be a comma separated list of queue names (no space).

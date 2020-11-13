@@ -196,7 +196,7 @@ def submit(
     requeueable - may a job be requeued if a node fails
     resources - list of resource request strings
     ramsplit - break tasks into multiple slots to meet RAM constraints
-    priority - job priority (0-1023)
+    priority - job priority - not supported
     mail_on - mail user on 'a'bort or reschedule, 'b'egin, 'e'nd,
             's'uspended, 'n'o mail
     mailto - email address to receive job info
