@@ -1024,6 +1024,7 @@ def _day_time_minutes(dayt):
         seconds = 0
     elif sub_day.count(':') == 1:
         (hours, minutes) = sub_day.split(':')
+        seconds = 0
     else:
         (hours, minutes, seconds) = sub_day.split(':')
     hours = int(hours)
