@@ -906,10 +906,28 @@ def _get_queue_gres(queue, sinfo=None):
     for gres_line in result.stdout.splitlines():
         if gres_line == '(null)':
             continue
-        grs, _ = gres_line.split('(')
-        gr, name, count = grs.split(':')
-        gres[gr.strip()].append((name, int(count)))
+        for sub_g in gres_line.split(','):
+            if '(' in gres_line:
+                sub_g, _ = sub_g.split('(')
+            fields = sub_g.split(':')
+            if len(fields) == 2:
+                # name:number
+                gres[fields[0]].append(_get_gres_count(fields[1]))
+            elif len(fields) == 4:
+                # name:type:'no_consume',number
+                gres[fields[0]].append((fields[1], _get_gres_count(fields[3])))
+            else:
+                # name:type:number
+                gres[fields[0]].append((fields[1], _get_gres_count(fields[2])))
     return gres
+
+
+def _get_gres_count(gres_count):
+    try:
+        count = int(gres_count)
+    except ValueError:
+        count = human_to_ram(gres_count, output='B', as_int=True)
+    return count
 
 
 def _get_queue_info(queue, sinfo=None):
