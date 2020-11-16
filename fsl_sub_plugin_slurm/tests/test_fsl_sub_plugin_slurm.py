@@ -1,13 +1,15 @@
 #!/usr/bin/env python
 import copy
 import datetime
+import io
 import os
 import subprocess
 import tempfile
 import unittest
-import yaml
 import fsl_sub_plugin_slurm
 
+from collections import defaultdict
+from ruamel.yaml import YAML
 from unittest.mock import (patch, )
 
 import fsl_sub.consts
@@ -16,7 +18,7 @@ from fsl_sub.exceptions import (
     UnknownJobId
 )
 
-conf_dict = yaml.safe_load('''---
+conf_dict = YAML(typ='safe').load('''---
 method_opts:
     slurm:
         memory_in_gb: False
@@ -42,7 +44,6 @@ method_opts:
         preserve_modules: True
         add_module_paths: []
         keep_jobscript: False
-        preserve_modules: True
 copro_opts:
     cuda:
         resource: gpu
@@ -1296,6 +1297,136 @@ class TestJobStatus(unittest.TestCase):
             task_output_keys.sort()
             self.assertListEqual(task_output_keys, self.task_expected_keys)
             self.assertDictEqual(job_stat, self.sacct_failedbatch_job)
+
+
+class TestQueueCapture(unittest.TestCase):
+    def setUp(self):
+        self.sinfo_f_one_host = '''os:centos7,
+'''
+        self.sinfo_f_two_host = (
+            '''gpu,'''
+            '''gpu_sku:P100,
+            gpu,'''
+            '''gpu_sku:V100,
+''')
+        self.sinfo_s = '''htc*\n'''
+        self.sinfo_G_two_host = 'gpu:p100:4(S:0-1)\ngpu:v100:8(S:0-1)'
+        self.sinfo_G_one_host = '(null)'
+        self.sinfo_O_one_host = '''8                  UNLIMITED           64000             1-00:00:00          htc-node1
+'''
+        self.sinfo_O_two_host = '''8                   UNLIMITED           384000               1-00:00:00          htc-gpu1
+16                 UNLIMITED           512000               5-00:00:00          htc-gpu2
+'''
+
+    @patch('fsl_sub_plugin_slurm._sinfo_cmd', return_value='/usr/bin/sinfo')
+    def test__get_queue_gres(self, mock_sinfo):
+        with patch('fsl_sub_plugin_slurm.sp.run') as mock_spr:
+            mock_spr.return_value = subprocess.CompletedProcess(
+                    ['sinfo', '%G', ], 0, self.sinfo_G_one_host
+                )
+            gres = fsl_sub_plugin_slurm._get_queue_gres('htc')
+            self.assertDictEqual(gres, defaultdict(list))
+
+        with patch('fsl_sub_plugin_slurm.sp.run') as mock_spr:
+            mock_spr.return_value = subprocess.CompletedProcess(
+                    ['sinfo', '%G', ], 0, self.sinfo_G_two_host
+                )
+            gres = fsl_sub_plugin_slurm._get_queue_gres('htc')
+            self.assertDictEqual(gres, {'gpu': [('p100', 4, ), ('v100', 8, ), ], })
+
+    @patch('fsl_sub_plugin_slurm._sinfo_cmd', return_value='/usr/bin/sinfo')
+    def test__get_queue_features(self, mock_sinfo):
+        with patch('fsl_sub_plugin_slurm.sp.run') as mock_spr:
+            mock_spr.return_value = subprocess.CompletedProcess(
+                    ['sinfo', '%f', ], 0, self.sinfo_f_one_host
+                )
+            features = fsl_sub_plugin_slurm._get_queue_features('htc')
+            self.assertDictEqual(features, {'os': ['centos7', ], })
+        with patch('fsl_sub_plugin_slurm.sp.run') as mock_spr:
+            mock_spr.return_value = subprocess.CompletedProcess(
+                    ['sinfo', '%f', ], 0, self.sinfo_f_two_host
+                )
+            features = fsl_sub_plugin_slurm._get_queue_features('htc')
+            self.assertDictEqual(features, {'gpu': [], 'gpu_sku': ['P100', 'V100'], })
+
+    @patch('fsl_sub_plugin_slurm._sinfo_cmd', return_value='/usr/bin/sinfo')
+    @patch('fsl_sub_plugin_slurm.method_config', return_value=conf_dict['method_opts']['slurm'])
+    def test_build_queue_defs(self, mock_mconf, mock_sinfo):
+        with patch('fsl_sub_plugin_slurm.sp.run') as mock_spr:
+            mock_spr.side_effect = (
+                subprocess.CompletedProcess(
+                    ['sinfo', '-s', ], 0, self.sinfo_s
+                ),
+                subprocess.CompletedProcess(
+                    ['sinfo', '%O', ], 0, self.sinfo_O_one_host
+                ),
+                subprocess.CompletedProcess(
+                    ['sinfo', '%G', ], 0, self.sinfo_G_one_host
+                ),
+                subprocess.CompletedProcess(
+                    ['sinfo', '%f', ], 0, self.sinfo_f_one_host
+                )
+            )
+            qdefs = fsl_sub_plugin_slurm.build_queue_defs()
+            yaml = YAML()
+            yaml.width = 128
+        expected_yaml = yaml.load('''
+htc: # Queue name
+  # Slots size on SLURM is largely irrelevant - setting to memory/CPUs
+  time: 1440 # Maximum job run time in minutes
+  max_slots: 8 # Maximum number of threads/slots on a queue
+  max_size: 64 # Maximum RAM size of a job
+  slot_size: 8 # Maximum memory per thread
+''')
+        qd_str = io.StringIO()
+        yaml.indent(mapping=2, sequence=4, offset=2)
+        yaml.dump(qdefs, qd_str)
+        eq_str = io.StringIO()
+        yaml.dump(expected_yaml, eq_str)
+        self.maxDiff = None
+        self.assertEqual(qd_str.getvalue(), eq_str.getvalue())
+        with self.subTest("Two hosts"):
+            with patch('fsl_sub_plugin_slurm.sp.run') as mock_spr:
+                mock_spr.side_effect = (
+                    subprocess.CompletedProcess(
+                        ['sinfo', '-s', ], 0, self.sinfo_s
+                    ),
+                    subprocess.CompletedProcess(
+                        ['sinfo', '%O', ], 0, self.sinfo_O_two_host
+                    ),
+                    subprocess.CompletedProcess(
+                        ['sinfo', '%G', ], 0, self.sinfo_G_two_host
+                    ),
+                    subprocess.CompletedProcess(
+                        ['sinfo', '%f', ], 0, self.sinfo_f_two_host
+                    )
+                )
+                qdefs = fsl_sub_plugin_slurm.build_queue_defs()
+                yaml = YAML()
+                yaml.width = 128
+            expected_yaml = yaml.load('''htc: # Queue name
+  # Partition contains nodes with different numbers of CPUs
+  # Partition contains nodes with different amounts of memory, consider switching on RAM nofitication
+  # Partition contains nodes with differing maximum run times, consider switching on time notification
+  # Slots size on SLURM is largely irrelevant - setting to memory/CPUs
+  # Partion has a GRES 'gpu' that might indicate the presence of GPUs
+  # 'resource' would be 'gpu' and associated classes:quantity would be:
+  # p100:4
+  # v100:8
+  # Partition has features that look like GPU resources, consider configuring GPUs
+  # 'resource' would be gpu_sku and associated classes would be P100,V100
+  time: 7200 # Maximum job run time in minutes
+  max_slots: 16 # Maximum number of threads/slots on a queue
+  max_size: 512 # Maximum RAM size of a job
+  slot_size: 32 # Maximum memory per thread
+''')
+            qd_str = io.StringIO()
+            yaml.indent(mapping=2, sequence=4, offset=2)
+            yaml.dump(qdefs, qd_str)
+            eq_str = io.StringIO()
+            yaml.dump(expected_yaml, eq_str)
+            self.maxDiff = None
+            self.assertEqual(qd_str.getvalue(), eq_str.getvalue())
 
 
 if __name__ == '__main__':
