@@ -4,8 +4,8 @@ import datetime
 import logging
 import os
 import subprocess as sp
-import yaml
 from collections import defaultdict
+from ruamel.yaml.comments import CommentedMap
 from shutil import which
 
 from fsl_sub.exceptions import (
@@ -35,7 +35,6 @@ from fsl_sub.utils import (
     job_script,
     write_wrapper,
     update_envvar_list,
-    YamlIndentDumper,
 )
 from .version import PLUGIN_VERSION
 
@@ -959,20 +958,20 @@ def _get_queue_info(queue, sinfo=None):
         qtime = _day_time_minutes(qtime)
         qvariants.append((cpus, memory, qtime, ))
 
-    qdef = {'cpus': None, 'memory': None, 'qtime': None, }
-    warnings = {'cpus': None, 'memory': None, 'qtime': None, }
+    qdef = {'qname': queue, 'cpus': None, 'memory': None, 'qtime': None, }
+    warnings = []
     for qv in qvariants:
         cpus, memory, qtime = qv
         if qdef['cpus'] is not None:
             if qdef['cpus'] != cpus:
-                warnings['cpus'] = "Partition contains nodes with different numbers of CPUs"
+                warnings.append("Partition contains nodes with different numbers of CPUs")
             if qdef['cpus'] < cpus:
                 qdef['cpus'] = cpus
         else:
             qdef['cpus'] = cpus
         if qdef['memory'] is not None:
             if qdef['memory'] != memory:
-                warnings['memory'] = (
+                warnings.append(
                     "Partition contains nodes with different amounts of memory,"
                     " consider switching on RAM nofitication")
             if qdef['memory'] < memory:
@@ -981,7 +980,7 @@ def _get_queue_info(queue, sinfo=None):
             qdef['memory'] = memory
         if qdef['qtime'] is not None:
             if qdef['qtime'] != qtime:
-                warnings['qtime'] = (
+                warnings.append(
                     "Partition contains nodes with differing maximum run times,"
                     " consider switching on time notification")
             if qdef['qtime'] < qtime:
@@ -1019,43 +1018,50 @@ def build_queue_defs():
     except BadSubmission as e:
         logger.error('Unable to query SLURM: ' + str(e))
         return ('', [])
-    queues = {}
+    queues = CommentedMap()
     for q in queue_list:
         qinfo, warnings = _get_queue_info(q)
         gres = _get_queue_gres(q)
         features = _get_queue_features(q)
-        queues[qinfo['qname']] = {}
+        queues[qinfo['qname']] = CommentedMap()
         qd = queues[qinfo['qname']]
-        qd['warnings'] = list(warnings.values())
+        queues.yaml_add_eol_comment("Queue name", qinfo['qname'], column=0)
+        add_comment = qd.yaml_add_eol_comment
         for coproc_m in ('gpu', 'cuda', 'phi', ):
             if coproc_m in q:
-                qd['warnings'].append(
+                warnings.append(
                     "'Quene name looks like it might be a queue supporting co-processors."
                     " Cannot auto-configure.'"
                 )
         qd['time'] = qinfo['qtime']
+        add_comment('Maximum job run time in minutes', 'time', column=0)
         qd['max_slots'] = qinfo['cpus']
+        add_comment("Maximum number of threads/slots on a queue", 'max_slots', column=0)
         qd['max_size'] = qinfo['memory']
+        add_comment("Maximum RAM size of a job", 'max_size', column=0)
         qd['slot_size'] = qinfo['memory'] // qinfo['cpus']
-        qd['warnings'].append("Slots size on SLURM is largely irrelevant - setting to memory/CPUs")
+        add_comment("Maximum memory per thread", 'slot_size')
+        warnings.append("Slots size on SLURM is largely irrelevant - setting to memory/CPUs")
         if 'gpu' in gres.keys():
-            qd['warnings'].append(
+            warnings.append(
                 "Partion has a GRES 'gpu' that might indicate the presence of GPUs")
-            qd['warnings'].append(
+            warnings.append(
                 "'resource' would be 'gpu' and associated classes:quantity would be:")
-            for resource_pair in gres['gpu']:
-                qd['warnings'].append(":".join(resource_pair))
+            for res_p in gres['gpu']:
+                warnings.append(":".join((res_p[0], str(res_p[1]))))
         gpu_matches = [(k, v) for k, v in features.items() if 'gpu' in k]
         if gpu_matches:
-            qd['warnings'].append(
+            warnings.append(
                 "Partition has features that look like GPU resources, consider configuring GPUs"
             )
-            for constraint, options in gpu_matches.items():
-                qd['warnings'].append(
-                    "'resource' would be {0} and associated classes would be {1}".format(constraint, ','.join(options))
-                )
-    yaml_string = '\n'.join(
-        [' ' + a for a in yaml.dump(
-            queues, Dumper=YamlIndentDumper, default_flow_style=False).split('\n')]
-    )
-    return yaml_string
+            for constraint, options in gpu_matches:
+                if options:
+                    warnings.append(
+                        "'resource' would be {0} and associated classes would be {1}".format(
+                            constraint, ','.join(options))
+                    )
+
+        for w in warnings:
+            queues.yaml_set_comment_before_after_key(qinfo['qname'], after=w)
+
+    return queues
