@@ -874,11 +874,16 @@ def _get_queue_features(queue, sinfo=None):
     except sp.CalledProcessError:
         raise BadSubmission(
             "Queue {0} not found!".format(queue))
-    for fl in result.output.splitlines():
+    for fl in result.stdout.splitlines():
         fs = fl.split(',')
         for f in fs:
-            feature, value = f.split(':')
-            features[feature].append(value)
+            f = f.strip()
+            if f != '':
+                if ':' in f:
+                    feature, value = f.split(':')
+                    features[feature].append(value)
+                else:
+                    features[f] = []
     return features
 
 
