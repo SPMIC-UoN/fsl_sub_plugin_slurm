@@ -1017,7 +1017,15 @@ def _day_time_minutes(dayt):
     else:
         sub_day = dayt
         days = 0
-    (hours, minutes, seconds) = sub_day.split(':')
+
+    if ':' not in sub_day:
+        minutes = sub_day
+        hours = 0
+        seconds = 0
+    elif sub_day.count(':') == 1:
+        (hours, minutes) = sub_day.split(':')
+    else:
+        (hours, minutes, seconds) = sub_day.split(':')
     hours = int(hours)
     minutes = int(minutes)
     seconds = int(seconds)
