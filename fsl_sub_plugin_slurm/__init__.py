@@ -613,16 +613,16 @@ def _default_config_file():
         'fsl_sub_slurm.yml')
 
 
-def example_conf():
-    '''Returns a string containing the example configuration for this
+def default_conf():
+    '''Returns a string containing the default configuration for this
     cluster plugin.'''
 
     try:
-        with open(_default_config_file()) as e_conf_f:
-            e_conf = e_conf_f.read()
+        with open(_default_config_file()) as d_conf_f:
+            d_conf = d_conf_f.read()
     except FileNotFoundError as e:
-        raise MissingConfiguration("Unable to find example configuration file: " + str(e))
-    return e_conf
+        raise MissingConfiguration("Unable to find default configuration file: " + str(e))
+    return d_conf
 
 
 def job_status(job_id, sub_job_id=None):
