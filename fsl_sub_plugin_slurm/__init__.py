@@ -671,7 +671,7 @@ def job_status(job_id, sub_job_id=None):
     try:
         job_details = _job(job_id, sub_job_id=sub_job_id)
 
-    except UnknownJobId as e:
+    except UnknownJobId:
         raise
     except Exception as e:
         raise GridOutputError from e
