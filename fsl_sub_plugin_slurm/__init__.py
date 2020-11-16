@@ -945,6 +945,7 @@ def _get_queue_info(queue, sinfo=None):
     conf_lines = output.splitlines()
     for cl in conf_lines:
         (cpus, maxcpus, memory, qtime, _) = cl.split()
+        cpus = int(cpus)
         try:
             maxcpus = int(maxcpus)
             cpus = max(cpus, maxcpus)
