@@ -864,7 +864,7 @@ def _get_queue_features(queue, sinfo=None):
     features = defaultdict(list)
     try:
         result = sp.run(
-            [sinfo, '-p', queue, '-o', '%f', ],
+            [sinfo, '-h', '-p', queue, '-o', '%f', ],
             stdout=sp.PIPE,
             stderr=sp.DEVNULL,
             check=True, universal_newlines=True)
@@ -889,7 +889,7 @@ def _get_queue_gres(queue, sinfo=None):
     gres = defaultdict(list)
     try:
         result = sp.run(
-            [sinfo, '-p', queue, '-o', '%G', ],
+            [sinfo, '-h', '-p', queue, '-o', '%G', ],
             stdout=sp.PIPE,
             stderr=sp.DEVNULL,
             check=True, universal_newlines=True)
