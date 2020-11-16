@@ -1036,6 +1036,11 @@ def _day_time_minutes(dayt):
     return days * (24 * 60) + hours * 60 + minutes
 
 
+def _add_warning(warnings, warning):
+    if warning not in warnings:
+        warnings.append(warning)
+
+
 def build_queue_defs():
     '''Return YAML suitable for configuring queues'''
     logger = _get_logger()
@@ -1056,7 +1061,8 @@ def build_queue_defs():
         add_comment = qd.yaml_add_eol_comment
         for coproc_m in ('gpu', 'cuda', 'phi', ):
             if coproc_m in q:
-                warnings.append(
+                _add_warning(
+                    warnings,
                     "'Quene name looks like it might be a queue supporting co-processors."
                     " Cannot auto-configure.'"
                 )
@@ -1068,22 +1074,27 @@ def build_queue_defs():
         add_comment("Maximum RAM size of a job", 'max_size', column=0)
         qd['slot_size'] = qinfo['memory'] // qinfo['cpus']
         add_comment("Maximum memory per thread", 'slot_size')
-        warnings.append("Slots size on SLURM is largely irrelevant - setting to memory/CPUs")
+        _add_warning(warnings, "Slots size on SLURM is largely irrelevant - setting to memory/CPUs")
         if 'gpu' in gres.keys():
-            warnings.append(
+            _add_warning(
+                warnings,
                 "Partion has a GRES 'gpu' that might indicate the presence of GPUs")
-            warnings.append(
+            _add_warning(
+                warnings,
                 "'resource' would be 'gpu' and associated classes:quantity would be:")
             for res_p in gres['gpu']:
-                warnings.append(":".join((res_p[0], str(res_p[1]))))
+                _add_warning(
+                    warnings, ":".join((res_p[0], str(res_p[1]))))
         gpu_matches = [(k, v) for k, v in features.items() if 'gpu' in k]
         if gpu_matches:
-            warnings.append(
+            _add_warning(
+                warnings,
                 "Partition has features that look like GPU resources, consider configuring GPUs"
             )
             for constraint, options in gpu_matches:
                 if options:
-                    warnings.append(
+                    _add_warning(
+                        warnings,
                         "'resource' would be {0} and associated classes would be {1}".format(
                             constraint, ','.join(options))
                     )
