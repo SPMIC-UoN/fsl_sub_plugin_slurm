@@ -1406,13 +1406,13 @@ class TestQueueCapture(unittest.TestCase):
             qdefs = fsl_sub_plugin_slurm.build_queue_defs()
             yaml = YAML()
             yaml.width = 128
-        expected_yaml = yaml.load('''
-htc: # Queue name
+        expected_yaml = yaml.load('''queues:
+  htc: # Queue name
   # Slots size on SLURM is largely irrelevant - setting to memory/CPUs
-  time: 1440 # Maximum job run time in minutes
-  max_slots: 8 # Maximum number of threads/slots on a queue
-  max_size: 64 # Maximum RAM size of a job
-  slot_size: 8 # Maximum memory per thread
+    time: 1440 # Maximum job run time in minutes
+    max_slots: 8 # Maximum number of threads/slots on a queue
+    max_size: 64 # Maximum RAM size of a job
+    slot_size: 8 # Maximum memory per thread
 ''')
         qd_str = io.StringIO()
         yaml.indent(mapping=2, sequence=4, offset=2)
@@ -1440,7 +1440,8 @@ htc: # Queue name
                 qdefs = fsl_sub_plugin_slurm.build_queue_defs()
                 yaml = YAML()
                 yaml.width = 128
-            expected_yaml = yaml.load('''htc: # Queue name
+            expected_yaml = yaml.load('''queues:
+  htc: # Queue name
   # Partition contains nodes with different numbers of CPUs
   # Partition contains nodes with different amounts of memory, consider switching on RAM nofitication
   # Partition contains nodes with differing maximum run times, consider switching on time notification
@@ -1451,10 +1452,10 @@ htc: # Queue name
   # v100:8
   # Partition has features that look like GPU resources, consider configuring GPUs
   # 'resource' would be gpu_sku and associated classes would be P100,V100
-  time: 7200 # Maximum job run time in minutes
-  max_slots: 16 # Maximum number of threads/slots on a queue
-  max_size: 512 # Maximum RAM size of a job
-  slot_size: 32 # Maximum memory per thread
+    time: 7200 # Maximum job run time in minutes
+    max_slots: 16 # Maximum number of threads/slots on a queue
+    max_size: 512 # Maximum RAM size of a job
+    slot_size: 32 # Maximum memory per thread
 ''')
             qd_str = io.StringIO()
             yaml.indent(mapping=2, sequence=4, offset=2)

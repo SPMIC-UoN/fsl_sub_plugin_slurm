@@ -1050,7 +1050,9 @@ def build_queue_defs():
     except BadSubmission as e:
         logger.error('Unable to query SLURM: ' + str(e))
         return ('', [])
-    queues = CommentedMap()
+    q_base = CommentedMap()
+    q_base['queues'] = CommentedMap()
+    queues = q_base['queues']
     for q in queue_list:
         qinfo, warnings = _get_queue_info(q)
         gres = _get_queue_gres(q)
@@ -1102,4 +1104,4 @@ def build_queue_defs():
         for w in warnings:
             queues.yaml_set_comment_before_after_key(qinfo['qname'], after=w)
 
-    return queues
+    return q_base
