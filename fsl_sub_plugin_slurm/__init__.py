@@ -899,10 +899,12 @@ def _get_queue_gres(queue, sinfo=None):
     except sp.CalledProcessError:
         raise BadSubmission(
             "Queue {0} not found!".format(queue))
-    for gres_line in result.output.splitlines():
+    for gres_line in result.stdout.splitlines():
+        if gres_line == '(null)':
+            continue
         grs, _ = gres_line.split('(')
         gr, name, count = grs.split(':')
-        gres[gr].append((name, count))
+        gres[gr.strip()].append((name, int(count)))
     return gres
 
 
