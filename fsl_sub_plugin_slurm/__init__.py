@@ -312,7 +312,7 @@ def submit(
             )
 
         def cp_class_item(cp, cpclass, item):
-            return coprocessor_config(cp)['class_types'][cpclass][item]
+            return cp['class_types'][cpclass][item]
 
         if coprocessor is not None:
             # Setup the coprocessor
