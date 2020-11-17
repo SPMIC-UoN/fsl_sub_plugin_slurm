@@ -26,7 +26,7 @@ setup(
         'Operating System :: POSIX :: Linux',
     ],
     keywords='FSL fsl Neuroimaging neuroimaging cluster'
-             ' grid slurm grid engine',
+             ' grid slurm',
     project_urls={
         'Documentation': 'https://fsl.fmrib.ox.ac.uk/fsl/fslwiki',
         'Source': 'https://git.fmrib.ox.ac.uk/fsl/fsl_sub_plugin_slurm'
