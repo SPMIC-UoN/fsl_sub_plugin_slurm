@@ -1462,17 +1462,19 @@ class TestQueueCapture(unittest.TestCase):
                 qdefs = fsl_sub_plugin_slurm.build_queue_defs()
                 yaml = YAML()
                 yaml.width = 128
-            expected_yaml = yaml.load('''queues:
+            expected_yaml = yaml.load(
+                '''queues:
   htc: # Queue name
   # Partition contains nodes with different numbers of CPUs
   # Partition contains nodes with different amounts of memory, consider switching on RAM nofitication
   # Partition contains nodes with differing maximum run times, consider switching on time notification
   # Partion has a GRES 'gpu' that might indicate the presence of GPUs, see below for possible configuration
-  # coproc: cuda 'resource' would be 'gpu' and associated classes:quantities would be:
+  # coproc: cuda 'resource' would be 'gpu' and associated class resources:quantities would be:
   # p100:4
   # v100:8
   # Partition has features that look like GPU resources, these might be usable as constraints
-  # If using constraints the coproc: cuda 'resource' could be gpu_sku and associated classes would be P100,V100
+  # If using constraints the coproc: cuda 'resource' could be gpu_sku and associated '''
+                '''class 'resource's would be P100,V100
   # copros:
   #   cuda:
   #     max_quantity: 8

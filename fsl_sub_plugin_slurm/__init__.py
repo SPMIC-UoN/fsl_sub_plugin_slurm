@@ -1091,7 +1091,7 @@ def build_queue_defs():
                 " see below for possible configuration")
             _add_warning(
                 warnings,
-                "coproc: cuda 'resource' would be 'gpu' and associated classes:quantities would be:")
+                "coproc: cuda 'resource' would be 'gpu' and associated class resources:quantities would be:")
             for res_p in gres['gpu']:
                 _add_warning(
                     warnings, ":".join((res_p[0], str(res_p[1]))))
@@ -1106,7 +1106,7 @@ def build_queue_defs():
                         _add_warning(
                             warnings,
                             "If using constraints the coproc: cuda 'resource' could be {0} "
-                            "and associated classes would be {1}".format(
+                            "and associated class 'resource's would be {1}".format(
                                 constraint, ','.join(options))
                         )
             qty = max([q[1] for q in gres['gpu']])
