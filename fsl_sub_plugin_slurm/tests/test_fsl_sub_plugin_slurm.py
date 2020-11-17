@@ -17,6 +17,9 @@ from fsl_sub.exceptions import (
     BadSubmission,
     UnknownJobId
 )
+from fsl_sub.utils import (
+    yaml_repr_none,
+)
 
 conf_dict = YAML(typ='safe').load('''---
 method_opts:
@@ -1427,14 +1430,14 @@ class TestQueueCapture(unittest.TestCase):
             yaml.width = 128
         expected_yaml = yaml.load('''queues:
   htc: # Queue name
-  # Slots size on SLURM is largely irrelevant - setting to memory/CPUs
     time: 1440 # Maximum job run time in minutes
     max_slots: 8 # Maximum number of threads/slots on a queue
-    max_size: 64 # Maximum RAM size of a job
-    slot_size: 8 # Maximum memory per thread
-''')
+    max_size: 64 # Maximum RAM size of a job in {0}B
+    slot_size: Null # Slot size is normally irrelevant on SLURM - set this to memory (in {0}B) per thread if required
+'''.format(fsl_sub.consts.RAMUNITS))
         qd_str = io.StringIO()
         yaml.indent(mapping=2, sequence=4, offset=2)
+        yaml.representer.add_representer(type(None), yaml_repr_none)
         yaml.dump(qdefs, qd_str)
         eq_str = io.StringIO()
         yaml.dump(expected_yaml, eq_str)
@@ -1464,7 +1467,6 @@ class TestQueueCapture(unittest.TestCase):
   # Partition contains nodes with different numbers of CPUs
   # Partition contains nodes with different amounts of memory, consider switching on RAM nofitication
   # Partition contains nodes with differing maximum run times, consider switching on time notification
-  # Slots size on SLURM is largely irrelevant - setting to memory/CPUs
   # Partion has a GRES 'gpu' that might indicate the presence of GPUs
   # 'resource' would be 'gpu' and associated classes:quantity would be:
   # p100:4
@@ -1473,11 +1475,12 @@ class TestQueueCapture(unittest.TestCase):
   # 'resource' would be gpu_sku and associated classes would be P100,V100
     time: 7200 # Maximum job run time in minutes
     max_slots: 16 # Maximum number of threads/slots on a queue
-    max_size: 512 # Maximum RAM size of a job
-    slot_size: 32 # Maximum memory per thread
-''')
+    max_size: 512 # Maximum RAM size of a job in {0}B
+    slot_size: Null # Slot size is normally irrelevant on SLURM - set this to memory (in {0}B) per thread if required
+'''.format(fsl_sub.consts.RAMUNITS))
             qd_str = io.StringIO()
             yaml.indent(mapping=2, sequence=4, offset=2)
+            yaml.representer.add_representer(type(None), yaml_repr_none)
             yaml.dump(qdefs, qd_str)
             eq_str = io.StringIO()
             yaml.dump(expected_yaml, eq_str)

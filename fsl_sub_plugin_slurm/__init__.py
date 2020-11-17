@@ -1069,7 +1069,7 @@ def build_queue_defs():
             if coproc_m in q:
                 _add_warning(
                     warnings,
-                    "'Quene name looks like it might be a queue supporting co-processors."
+                    "'Queue name looks like it might be a queue supporting co-processors."
                     " Cannot auto-configure.'"
                 )
         qd['time'] = qinfo['qtime']
@@ -1077,11 +1077,21 @@ def build_queue_defs():
         qd['max_slots'] = qinfo['cpus']
         add_comment("Maximum number of threads/slots on a queue", 'max_slots', column=0)
         qd['max_size'] = qinfo['memory']
-        add_comment("Maximum RAM size of a job", 'max_size', column=0)
-        qd['slot_size'] = qinfo['memory'] // qinfo['cpus']
-        add_comment("Maximum memory per thread", 'slot_size')
-        _add_warning(warnings, "Slots size on SLURM is largely irrelevant - setting to memory/CPUs")
+        add_comment("Maximum RAM size of a job in " + fsl_sub.consts.RAMUNITS + 'B', 'max_size', column=0)
+        qd['slot_size'] = None
+        add_comment(
+            "Slot size is normally irrelevant on SLURM "
+            "- set this to memory (in {0}B) per thread if required".format(fsl_sub.consts.RAMUNITS),
+            'slot_size')
         if 'gpu' in gres.keys():
+            qty = max([q[1] for q in gres['gpu']])
+            qd.yaml_set_comment_before_after_key('slot_size', after='copros:')
+            qd.yaml_set_comment_before_after_key('slot_size', after='  cuda:')
+            qd.yaml_set_comment_before_after_key('slot_size', after='    max_quantity: ' + str(qty))
+            qd.yaml_set_comment_before_after_key('slot_size', after='    classes:')
+            for res_p in gres['gpu']:
+                qd.yaml_set_comment_before_after_key('slot_size', after='      - ' + res_p[0])
+
             _add_warning(
                 warnings,
                 "Partion has a GRES 'gpu' that might indicate the presence of GPUs")
