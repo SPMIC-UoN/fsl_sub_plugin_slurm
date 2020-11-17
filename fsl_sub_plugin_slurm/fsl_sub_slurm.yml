@@ -25,6 +25,9 @@ method_opts:
     # then this could be set to False as the system should automatically
     # increase the number of CPUs required to satisfy memory requirements
     notify_ram_usage: True # Whether to tell Slurm how much RAM has been specified
+    # WARNING, your job will be killed if it exceeds this RAM allocation.
+    # This option is important if you have more than one node memory size within
+    # a partition.
     set_time_limit: False # Whether to tell Slurm the requested runtime (in minutes)
     # WARNING, your job will be killed if it exceeds this time
     array_holds: True # Array holds supported? - Requires Slurm 16.05+

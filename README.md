@@ -46,7 +46,9 @@ The configuration for the SLURM plugin is in the _method\_opts_ section, under t
 
 ### Coprocessor Configuration
 
-This plugin is not capable of automatically determining all the necessary information to configure your co-processors. SLURM typically selects GPU resources with a GRES (Generic RESource) that defines the type and quantity of the co-processor. Where multiple classes of co-processor are available this might be selectable via the GRES or you may need to provide a _constraint_. If you would like to be able to support running on a class and all superior devices you need to be able to use constraints as GRES requests do not support logical combinations. The automatically generated configuration should include useful information about your GRES and constraints, but should you wish to obtain this information yourself use the commands:
+This plugin is not capable of automatically determining all the necessary information to configure your co-processors but will advise of the information it can find and propose queue definitions for these GPU resources.
+
+SLURM typically selects GPU resources with a GRES (Generic RESource) that defines the type and quantity of the co-processor. Where multiple classes of co-processor are available this might be selectable via the GRES or you may need to provide a _constraint_. If you would like to be able to support running on a class and all superior devices you need to be able to use constraints as GRES requests do not support logical combinations. The automatically generated configuration should include useful information about your GRES and constraints, but should you wish to obtain this information yourself use the commands:
 
 * `sinfo -p <partition> -o %G` - This will list all the GRES defined on \<partition>.
 * `sinfo -p <partition> -o %f` - This will list all features selectable by a `--constraint` as a comma-separated list.
@@ -90,8 +92,10 @@ This will return details for every node within that partition. The queue definit
 | time | integer in minutes | The _TIMELIMIT_ column reports in days-hours:minutes:seconds, this needs converting to minutes. Provide the maximum value observed, but if there are multiple values you should consider enabling job time notification so that SLURM can select the correct node.||
 | max\_size | integer in GB | This is the maximum permitted memory on a node. This is usually reported by SLURM in MB, so for example 63000 should be configured as 63 (GB). It is equal to the maximum _MEMORY_ value reported. Once again, if there are multiple node types you should turn on RAM nofitication so that nodes can be correctly selected.
 | max\_slots | _CPU_ contains the number of CPUs (threads) available on each node. Set this option to the maximum number reported. |
-| slot\_size | integer in GB | This is largely meaningless on SLURM but should be set to _max\_size_/_max\_slots_. This is probably best set to the smallest such ratio. |
-| group | integer | All partitions with the same group number will be considered together when scheduling, typically this would be all queues with the same run time but differing memory/core counts.|
+| slot\_size | **Null**/integer in GB | This is largely meaningless on SLURM and left at None. If you find that you need to get fsl\_sub to split your job into multiple threads to achieve your memory requirements then set this to the figure provided by your cluster manager. |
+| group | integer | (Optional) All partitions with the same group number will be considered together when scheduling, typically this would be all queues with the same run time but differing memory/core counts.|
+
+Where a partition has obvious GRES or features that define GPUs a proposed GPU configuration will be added as comments to the start of the queue definition. You should review this, create/update the coproc_opts>cuda record with the information in the comments and then this section can be uncommented to enable GPU support.
 
 #### Compound Queues
 
