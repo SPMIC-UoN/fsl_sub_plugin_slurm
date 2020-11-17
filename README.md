@@ -34,7 +34,7 @@ The configuration for the SLURM plugin is in the _method\_opts_ section, under t
 | mail\_modes | Dictionary of option lists | If the grid has email notifications turned on, this option configures the submission options for different verbosity levels, 'b' = job start, 'e' = job end, 'a' = job abort, 'f' = all events, 'n' = no mail. Each event type should then have a list of submission mail arguments that will be applied to the submitted job. Typically, these should not be edited.
 | mail\_mode | b/e/a/f/**n** | Which of the above mail_modes to use by default
 | notify\_ram\_usage | **True**/False | Whether to notify SLURM of the RAM you have requested. SLURM is typically configured to give jobs a small RAM allocation so you will invariably need this set to true.
-| set\_time\_limit | True/**False** | Whether to notify Grid Engine of the expected *maximum* run-time of your job. This helps the scheduler fill in reserved slots (for e.g. parallel environment jobs), however, this time limit will be enforced, resulting in a job being killed if it is exceeded, even if this is less than the queue run-time limit. This can be disabled on a per-job basis by setting the environment variable FSLSUB_NOTIMELIMIT to '1' (or 'True').
+| set\_time\_limit | True/**False** | Whether to notify SLURM of the expected *maximum* run-time of your job. This helps the scheduler fill in reserved slots (for e.g. parallel environment jobs), however, this time limit will be enforced, resulting in a job being killed if it is exceeded, even if this is less than the queue run-time limit. This can be disabled on a per-job basis by setting the environment variable FSLSUB_NOTIMELIMIT to '1' (or 'True').
 | array\_holds | **True**/False | Enable support array holds, e.g. sub-task 1 waits for parent sub-task 1.
 | array\_limit | **True**/False | Enable limiting number of concurrent array tasks.
 | job\_resources | **True**/False | Enable additional job resource specification support.
@@ -63,7 +63,7 @@ For each coprocessor hardware type you need a sub-section given an identifier th
 | class\_types | Configuration dictionary | This contains the definition of the GPU classes... |
 | | _Key_ | |
 | | class selector | This is the letter (or word) that is used to select this class of co-processor from the fsl\_sub commandline. For CUDA devices you may consider using the card name e.g. A100.|
-| | resource | This is the name of the Grid Engine 'complex' that will be used to select this GPU family, you can look for possible values with `qconf -sc <hostname>` (it's normally _gputype_).
+| | resource | This is the name of the SLURM GRES 'type' or contraint that will be used to select this GPU family.
 | | doc | The description that appears in the fsl\_sub help text about this device.
 | | capability | An integer defining the feature set of the device, your most basic device should be given the value 1 and more capable devices higher values, e.g. GTX = 1, Kelper = 2, Pascal = 3, Volta = 4.
 | default\_class | _Class type key_ | The _class selector_ for the class to assign jobs to where a class has not been specified in the fsl\_sub call. For FSL tools that automatically submit to CUDA queues you should aim to select one that has good double-precision performance (K40|80, P100, V100, A100) and ensure all higher capability devices also have good double-precision.
