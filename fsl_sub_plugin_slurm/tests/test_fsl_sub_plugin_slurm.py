@@ -1467,12 +1467,18 @@ class TestQueueCapture(unittest.TestCase):
   # Partition contains nodes with different numbers of CPUs
   # Partition contains nodes with different amounts of memory, consider switching on RAM nofitication
   # Partition contains nodes with differing maximum run times, consider switching on time notification
-  # Partion has a GRES 'gpu' that might indicate the presence of GPUs
-  # 'resource' would be 'gpu' and associated classes:quantity would be:
+  # Partion has a GRES 'gpu' that might indicate the presence of GPUs, see below for possible configuration
+  # coproc: cuda 'resource' would be 'gpu' and associated classes:quantities would be:
   # p100:4
   # v100:8
-  # Partition has features that look like GPU resources, consider configuring GPUs
-  # 'resource' would be gpu_sku and associated classes would be P100,V100
+  # Partition has features that look like GPU resources, these might be usable as constraints
+  # If using constraints the coproc: cuda 'resource' could be gpu_sku and associated classes would be P100,V100
+  # copros:
+  #   cuda:
+  #     max_quantity: 8
+  #     classes:
+  #       - p100
+  #       - v100
     time: 7200 # Maximum job run time in minutes
     max_slots: 16 # Maximum number of threads/slots on a queue
     max_size: 512 # Maximum RAM size of a job in {0}B

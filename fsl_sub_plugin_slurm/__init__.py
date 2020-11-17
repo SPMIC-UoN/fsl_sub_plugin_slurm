@@ -1084,36 +1084,38 @@ def build_queue_defs():
             "- set this to memory (in {0}B) per thread if required".format(fsl_sub.consts.RAMUNITS),
             'slot_size')
         if 'gpu' in gres.keys():
-            qty = max([q[1] for q in gres['gpu']])
-            qd.yaml_set_comment_before_after_key('slot_size', after='copros:')
-            qd.yaml_set_comment_before_after_key('slot_size', after='  cuda:')
-            qd.yaml_set_comment_before_after_key('slot_size', after='    max_quantity: ' + str(qty))
-            qd.yaml_set_comment_before_after_key('slot_size', after='    classes:')
-            for res_p in gres['gpu']:
-                qd.yaml_set_comment_before_after_key('slot_size', after='      - ' + res_p[0])
 
             _add_warning(
                 warnings,
-                "Partion has a GRES 'gpu' that might indicate the presence of GPUs")
+                "Partion has a GRES 'gpu' that might indicate the presence of GPUs,"
+                " see below for possible configuration")
             _add_warning(
                 warnings,
-                "'resource' would be 'gpu' and associated classes:quantity would be:")
+                "coproc: cuda 'resource' would be 'gpu' and associated classes:quantities would be:")
             for res_p in gres['gpu']:
                 _add_warning(
                     warnings, ":".join((res_p[0], str(res_p[1]))))
-        gpu_matches = [(k, v) for k, v in features.items() if 'gpu' in k]
-        if gpu_matches:
-            _add_warning(
-                warnings,
-                "Partition has features that look like GPU resources, consider configuring GPUs"
-            )
-            for constraint, options in gpu_matches:
-                if options:
-                    _add_warning(
-                        warnings,
-                        "'resource' would be {0} and associated classes would be {1}".format(
-                            constraint, ','.join(options))
-                    )
+            gpu_matches = [(k, v) for k, v in features.items() if 'gpu' in k]
+            if gpu_matches:
+                _add_warning(
+                    warnings,
+                    "Partition has features that look like GPU resources, these might be usable as constraints"
+                )
+                for constraint, options in gpu_matches:
+                    if options:
+                        _add_warning(
+                            warnings,
+                            "If using constraints the coproc: cuda 'resource' could be {0} "
+                            "and associated classes would be {1}".format(
+                                constraint, ','.join(options))
+                        )
+            qty = max([q[1] for q in gres['gpu']])
+            _add_warning(warnings, 'copros:')
+            _add_warning(warnings, '  cuda:')
+            _add_warning(warnings, '    max_quantity: ' + str(qty))
+            _add_warning(warnings, '    classes:')
+            for res_p in sorted(list(set(gres['gpu']))):
+                _add_warning(warnings, '      - ' + res_p[0])
 
         for w in warnings:
             queues.yaml_set_comment_before_after_key(qinfo['qname'], after=w)
