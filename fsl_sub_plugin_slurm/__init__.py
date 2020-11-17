@@ -982,14 +982,17 @@ def _get_queue_info(queue, sinfo=None):
         cpus, memory, qtime = qv
         if qdef['cpus'] is not None:
             if qdef['cpus'] != cpus:
-                warnings.append("Partition contains nodes with different numbers of CPUs")
+                _add_warning(
+                    warnings,
+                    "Partition contains nodes with different numbers of CPUs")
             if qdef['cpus'] < cpus:
                 qdef['cpus'] = cpus
         else:
             qdef['cpus'] = cpus
         if qdef['memory'] is not None:
             if qdef['memory'] != memory:
-                warnings.append(
+                _add_warning(
+                    warnings,
                     "Partition contains nodes with different amounts of memory,"
                     " consider switching on RAM nofitication")
             if qdef['memory'] < memory:
@@ -998,7 +1001,8 @@ def _get_queue_info(queue, sinfo=None):
             qdef['memory'] = memory
         if qdef['qtime'] is not None:
             if qdef['qtime'] != qtime:
-                warnings.append(
+                _add_warning(
+                    warnings,
                     "Partition contains nodes with differing maximum run times,"
                     " consider switching on time notification")
             if qdef['qtime'] < qtime:
