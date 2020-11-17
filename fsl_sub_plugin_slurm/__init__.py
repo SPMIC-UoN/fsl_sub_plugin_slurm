@@ -10,7 +10,6 @@ from shutil import which
 
 from fsl_sub.exceptions import (
     BadSubmission,
-    BadConfiguration,
     MissingConfiguration,
     GridOutputError,
     UnknownJobId,
@@ -429,21 +428,11 @@ def submit(
             if ramsplit:
                 jobram = split_ram_by_slots(jobram, threads)
                 # mem-per-cpu if dividing RAM up, otherwise mem
-            ram_units = fsl_sub.consts.RAMUNITS
-
-            # RAM is specified in megabytes
-            try:
-                mem_in_mb = human_to_ram(
-                    jobram,
-                    units=ram_units,
-                    output="M")
-            except ValueError:
-                raise BadConfiguration("ram_units not one of P, T, G, M, K")
             if mconf['notify_ram_usage']:
                 command_args.append(
                     '='.join((
                         '--mem-per-cpu',
-                        str(int(mem_in_mb))
+                        str(jobram) + fsl_sub.consts.RAMUNITS
                     ))
                 )
         try:
@@ -1090,6 +1079,8 @@ def build_queue_defs():
             "Slot size is normally irrelevant on SLURM "
             "- set this to memory (in {0}B) per thread if required".format(fsl_sub.consts.RAMUNITS),
             'slot_size')
+        add_comment('    priority: 1')
+        add_comment('    group: 1')
         if 'gpu' in gres.keys():
 
             _add_comment(
