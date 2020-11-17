@@ -46,7 +46,6 @@ method_opts:
     # add these paths to this list
 coproc_opts:
   cuda:
-    class_constraints: False # Does the SURLM cluster use constraints to specify GPU types rather than
+    class_constraint: False # Does the SURLM cluster use constraints to specify GPU types rather than
     # adding it to the GRES? If your cluster instructions say use --constraint (or -C) <class> then set this
-    # to True, if you are told to use --gres gpu:<class>:<qty> then set this to false. If this is False then
-    # --coprocessor.
+    # to the name of the constraint, if you are told to use --gres gpu:<class>:<qty> then set this to false.

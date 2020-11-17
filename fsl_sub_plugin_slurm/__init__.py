@@ -315,6 +315,7 @@ def submit(
             return cp['class_types'][cpclass][item]
 
         if coprocessor is not None:
+
             # Setup the coprocessor
             cpconf = coprocessor_config(coprocessor)
 
@@ -327,7 +328,9 @@ def submit(
                 cpclasses.append(cp_class_item(cpconf, coprocessor_class, 'resource'))
 
             if cpconf.get('classes', False):
-                if cpconf.get('class_constraints', True):
+                class_constraint = cpconf.get('class_constraint', False)
+
+                if class_constraint:
                     if cpconf.get('include_more_capable', True) and not coprocessor_class_strict:
                         cp_capability = cp_class_item(cpconf, coprocessor_class, 'capability')
                         base_list = [
@@ -342,7 +345,11 @@ def submit(
                             if a not in cpclasses]
                     else:
                         cpclasses.append(cp_class_item(cpconf, coprocessor_class, 'resource'))
-                    command_args.append('='.join(('--constraint', '"{0}"'.format('|'.join(cpclasses)))))
+
+                    constraints = [":".join((class_constraint, cpc)) for cpc in cpclasses]
+                    command_args.append('='.join(
+                        ('--constraint', '"{0}"'.format('|'.join(constraints)))
+                        ))
                 else:
                     if len(cpclasses) == 1:
                         gres_items.insert(1, cpclasses[0])

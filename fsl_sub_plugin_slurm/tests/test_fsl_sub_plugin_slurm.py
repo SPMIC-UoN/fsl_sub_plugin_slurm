@@ -759,7 +759,7 @@ module load mymodule
             w_conf = copy.deepcopy(self.config)
             w_conf['method_opts']['slurm']['projects'] = True
             w_conf['method_opts']['slurm']['add_module_paths'] = ['/usr/local/shellmodules']
-            w_conf['copro_opts']['cuda']['class_constraints'] = False
+            w_conf['copro_opts']['cuda']['class_constraint'] = False
             self.mocks['fsl_sub_plugin_slurm.method_config'].return_value = w_conf['method_opts']['slurm']
             mock_cpconf.return_value = w_conf['copro_opts']['cuda']
             expected_cmd = ['/usr/bin/sbatch']

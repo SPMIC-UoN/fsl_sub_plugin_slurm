@@ -69,8 +69,8 @@ For each coprocessor hardware type you need a sub-section given an identifier th
 | | doc | The description that appears in the fsl\_sub help text about this device.
 | | capability | An integer defining the feature set of the device, your most basic device should be given the value 1 and more capable devices higher values, e.g. GTX = 1, Kelper = 2, Pascal = 3, Volta = 4.
 | default\_class | _Class type key_ | The _class selector_ for the class to assign jobs to where a class has not been specified in the fsl\_sub call. For FSL tools that automatically submit to CUDA queues you should aim to select one that has good double-precision performance (K40|80, P100, V100, A100) and ensure all higher capability devices also have good double-precision.
-| class\_constraints | **True**/False | Whether your SLURM cluster is configured with co-processor selection features. If so this should be set to true and the co-processor _resource_ and class _resource_ strings set appropriately to match the available values. |
-| presence\_test | _Program path_ (**nvidia-smi** for CUDA) | The name of a program that can be used to look for this coprocessor type, for example nvidia-smi for CUDA devices. Program needs to return non-zero exit status if there are no available coprocessors.
+| class\_constraint | **False**/string | Whether your SLURM cluster is configured to use constraints to select co-processor models/features. If so this should be set to the name of the feature that selects between the models and the co-processor class _resource_ strings set appropriately to match the available values. |
+| presence\_test | _Program path_ (**nvidia-smi** for CUDA) | The name of a program that can be used to look for this coprocessor type, for example nvidia-smi for CUDA devices. Program needs to return non-zero exit status if there are no available coprocessors. |
 
 ### Queue Definitions
 
