@@ -977,13 +977,13 @@ def _get_queue_info(queue, sinfo=None):
         qvariants.append((cpus, memory, qtime, ))
 
     qdef = {'qname': queue, 'cpus': None, 'memory': None, 'qtime': None, }
-    warnings = []
+    comments = []
     for qv in qvariants:
         cpus, memory, qtime = qv
         if qdef['cpus'] is not None:
             if qdef['cpus'] != cpus:
-                _add_warning(
-                    warnings,
+                _add_comment(
+                    comments,
                     "Partition contains nodes with different numbers of CPUs")
             if qdef['cpus'] < cpus:
                 qdef['cpus'] = cpus
@@ -991,8 +991,8 @@ def _get_queue_info(queue, sinfo=None):
             qdef['cpus'] = cpus
         if qdef['memory'] is not None:
             if qdef['memory'] != memory:
-                _add_warning(
-                    warnings,
+                _add_comment(
+                    comments,
                     "Partition contains nodes with different amounts of memory,"
                     " consider switching on RAM nofitication")
             if qdef['memory'] < memory:
@@ -1001,8 +1001,8 @@ def _get_queue_info(queue, sinfo=None):
             qdef['memory'] = memory
         if qdef['qtime'] is not None:
             if qdef['qtime'] != qtime:
-                _add_warning(
-                    warnings,
+                _add_comment(
+                    comments,
                     "Partition contains nodes with differing maximum run times,"
                     " consider switching on time notification")
             if qdef['qtime'] < qtime:
@@ -1010,7 +1010,7 @@ def _get_queue_info(queue, sinfo=None):
         else:
             qdef['qtime'] = qtime
 
-    return qdef, warnings
+    return qdef, comments
 
 
 def _day_time_minutes(dayt):
@@ -1040,9 +1040,9 @@ def _day_time_minutes(dayt):
     return days * (24 * 60) + hours * 60 + minutes
 
 
-def _add_warning(warnings, warning):
-    if warning not in warnings:
-        warnings.append(warning)
+def _add_comment(comments, comment):
+    if comment not in comments:
+        comments.append(comment)
 
 
 def build_queue_defs():
@@ -1058,7 +1058,7 @@ def build_queue_defs():
     q_base['queues'] = CommentedMap()
     queues = q_base['queues']
     for q in queue_list:
-        qinfo, warnings = _get_queue_info(q)
+        qinfo, comments = _get_queue_info(q)
         gres = _get_queue_gres(q)
         features = _get_queue_features(q)
         queues[qinfo['qname']] = CommentedMap()
@@ -1067,8 +1067,8 @@ def build_queue_defs():
         add_comment = qd.yaml_add_eol_comment
         for coproc_m in ('gpu', 'cuda', 'phi', ):
             if coproc_m in q:
-                _add_warning(
-                    warnings,
+                _add_comment(
+                    comments,
                     "'Queue name looks like it might be a queue supporting co-processors."
                     " Cannot auto-configure.'"
                 )
@@ -1085,39 +1085,40 @@ def build_queue_defs():
             'slot_size')
         if 'gpu' in gres.keys():
 
-            _add_warning(
-                warnings,
+            _add_comment(
+                comments,
                 "Partion has a GRES 'gpu' that might indicate the presence of GPUs,"
                 " see below for possible configuration")
-            _add_warning(
-                warnings,
+            _add_comment(
+                comments,
                 "coproc: cuda 'resource' would be 'gpu' and associated class resources:quantities would be:")
             for res_p in gres['gpu']:
-                _add_warning(
-                    warnings, ":".join((res_p[0], str(res_p[1]))))
+                _add_comment(
+                    comments, ":".join((res_p[0], str(res_p[1]))))
             gpu_matches = [(k, v) for k, v in features.items() if 'gpu' in k]
             if gpu_matches:
-                _add_warning(
-                    warnings,
+                _add_comment(
+                    comments,
                     "Partition has features that look like GPU resources, these might be usable as constraints"
                 )
                 for constraint, options in gpu_matches:
                     if options:
-                        _add_warning(
-                            warnings,
+                        _add_comment(
+                            comments,
                             "If using constraints the coproc: cuda 'resource' could be {0} "
                             "and associated class 'resource's would be {1}".format(
                                 constraint, ','.join(options))
                         )
             qty = max([q[1] for q in gres['gpu']])
-            _add_warning(warnings, 'copros:')
-            _add_warning(warnings, '  cuda:')
-            _add_warning(warnings, '    max_quantity: ' + str(qty))
-            _add_warning(warnings, '    classes:')
+            _add_comment(comments, 'copros:')
+            _add_comment(comments, '  cuda:')
+            _add_comment(comments, '    max_quantity: ' + str(qty))
+            _add_comment(comments, '    classes:')
             for res_p in sorted(list(set(gres['gpu']))):
-                _add_warning(warnings, '      - ' + res_p[0])
+                _add_comment(comments, '      - ' + res_p[0])
+            _add_comment(comments, "default: true")
 
-        for w in warnings:
+        for w in comments:
             queues.yaml_set_comment_before_after_key(qinfo['qname'], after=w)
 
     return q_base
