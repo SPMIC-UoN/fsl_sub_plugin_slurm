@@ -826,7 +826,7 @@ def project_list():
         )
     except FileNotFoundError:
         raise BadSubmission(
-            "Grid Engine software may not be correctly installed")
+            "SLURM software may not be correctly installed")
     except sp.CalledProcessError as e:
         raise GridOutputError(e.stderr)
     return [a[0] for a in accounts_out.stdout.split('|')]
@@ -844,7 +844,7 @@ def _get_queues(sinfo=None):
             check=True, universal_newlines=True)
     except (FileNotFoundError, sp.CalledProcessError, ):
         raise BadSubmission(
-            "Grid Engine software may not be correctly installed")
+            "SLURM software may not be correctly installed")
     queues = []
     default = None
     for q in result.stdout.splitlines():
@@ -869,7 +869,7 @@ def _get_queue_features(queue, sinfo=None):
             check=True, universal_newlines=True)
     except FileNotFoundError:
         raise BadSubmission(
-            "Grid Engine software may not be correctly installed")
+            "SLURM software may not be correctly installed")
     except sp.CalledProcessError:
         raise BadSubmission(
             "Queue {0} not found!".format(queue))
@@ -899,7 +899,7 @@ def _get_queue_gres(queue, sinfo=None):
             check=True, universal_newlines=True)
     except FileNotFoundError:
         raise BadSubmission(
-            "Grid Engine software may not be correctly installed")
+            "SLURM software may not be correctly installed")
     except sp.CalledProcessError:
         raise BadSubmission(
             "Queue {0} not found!".format(queue))
@@ -952,7 +952,7 @@ def _get_queue_info(queue, sinfo=None):
             check=True, universal_newlines=True)
     except FileNotFoundError:
         raise BadSubmission(
-            "Grid Engine software may not be correctly installed")
+            "SLURM software may not be correctly installed")
     except sp.CalledProcessError:
         raise BadSubmission(
             "Queue {0} not found!".format(queue))
