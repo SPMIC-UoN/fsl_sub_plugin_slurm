@@ -91,6 +91,25 @@ class TestSlurmUtils(unittest.TestCase):
             70.1
         )
 
+    def test__add_warning(self):
+        warnings = []
+        warnings.append('A warning')
+        newwarnings = list(warnings)
+        fsl_sub_plugin_slurm._add_warning(
+            newwarnings, 'A warning'
+        )
+        self.assertListEqual(
+            warnings,
+            newwarnings
+        )
+        fsl_sub_plugin_slurm._add_warning(
+            newwarnings, 'Another warning'
+        )
+        self.assertListEqual(
+            ['A warning', 'Another warning', ],
+            newwarnings
+        )
+
 
 class TestslurmFinders(unittest.TestCase):
     @patch('fsl_sub_plugin_slurm.which', autospec=True)
