@@ -98,35 +98,35 @@ class TestSlurmUtils(unittest.TestCase):
         self.assertEqual(
             fsl_sub_plugin_slurm._day_time_minutes('1-00:00:00'),
             24 * 60
-            )
+        )
         self.assertEqual(
             fsl_sub_plugin_slurm._day_time_minutes('1-00:01:00'),
             24 * 60 + 1
-            )
+        )
         self.assertEqual(
             fsl_sub_plugin_slurm._day_time_minutes('0-00:01:00'),
             1
-            )
+        )
         self.assertEqual(
             fsl_sub_plugin_slurm._day_time_minutes('0-00:00:01'),
             1
-            )
+        )
         self.assertEqual(
             fsl_sub_plugin_slurm._day_time_minutes('0-01:00:00'),
             60
-            )
+        )
         self.assertEqual(
             fsl_sub_plugin_slurm._day_time_minutes('0-01:01:00'),
             60 + 1
-            )
+        )
         self.assertEqual(
             fsl_sub_plugin_slurm._day_time_minutes('10:00'),
             10
-            )
+        )
         self.assertEqual(
             fsl_sub_plugin_slurm._day_time_minutes('10'),
             1
-            )
+        )
 
     def test__add_comment(self):
         comments = []
@@ -1384,46 +1384,46 @@ class TestQueueCapture(unittest.TestCase):
         with patch('fsl_sub_plugin_slurm.sp.run') as mock_spr:
             with self.subTest('No Type'):
                 mock_spr.return_value = subprocess.CompletedProcess(
-                        ['sinfo', '%G', ], 0, self.sinfo_G_no_type
-                    )
+                    ['sinfo', '%G', ], 0, self.sinfo_G_no_type
+                )
                 gres = fsl_sub_plugin_slurm._get_queue_gres('htc')
                 self.assertDictEqual(
                     gres,
                     {'gpu': [2]})
             with self.subTest("Multiplier"):
                 mock_spr.return_value = subprocess.CompletedProcess(
-                        ['sinfo', '%G', ], 0, self.sinfo_G_multiplier
-                    )
+                    ['sinfo', '%G', ], 0, self.sinfo_G_multiplier
+                )
                 gres = fsl_sub_plugin_slurm._get_queue_gres('htc')
                 self.assertDictEqual(
                     gres,
                     {'gpu': [2048]})
             with self.subTest("No Parens"):
                 mock_spr.return_value = subprocess.CompletedProcess(
-                        ['sinfo', '%G', ], 0, self.sinfo_G_no_parens
-                    )
+                    ['sinfo', '%G', ], 0, self.sinfo_G_no_parens
+                )
                 gres = fsl_sub_plugin_slurm._get_queue_gres('htc')
                 self.assertDictEqual(
                     gres,
                     {'gpu': [('gtx', 2), ]})
             with self.subTest("List"):
                 mock_spr.return_value = subprocess.CompletedProcess(
-                        ['sinfo', '%G', ], 0, self.sinfo_G_list
-                    )
+                    ['sinfo', '%G', ], 0, self.sinfo_G_list
+                )
                 gres = fsl_sub_plugin_slurm._get_queue_gres('htc')
                 self.assertDictEqual(
                     gres,
                     {'gpu': [('p100', 2), ('v100', 2), ]})
             with self.subTest("No GRES"):
                 mock_spr.return_value = subprocess.CompletedProcess(
-                        ['sinfo', '%G', ], 0, self.sinfo_G_one_host
-                    )
+                    ['sinfo', '%G', ], 0, self.sinfo_G_one_host
+                )
                 gres = fsl_sub_plugin_slurm._get_queue_gres('htc')
                 self.assertDictEqual(gres, defaultdict(list))
             with self.subTest('Two hosts'):
                 mock_spr.return_value = subprocess.CompletedProcess(
-                        ['sinfo', '%G', ], 0, self.sinfo_G_two_host
-                    )
+                    ['sinfo', '%G', ], 0, self.sinfo_G_two_host
+                )
                 gres = fsl_sub_plugin_slurm._get_queue_gres('htc')
                 self.assertDictEqual(gres, {'gpu': [('p100', 4, ), ('v100', 8, ), ], })
 
@@ -1431,14 +1431,14 @@ class TestQueueCapture(unittest.TestCase):
     def test__get_queue_features(self, mock_sinfo):
         with patch('fsl_sub_plugin_slurm.sp.run') as mock_spr:
             mock_spr.return_value = subprocess.CompletedProcess(
-                    ['sinfo', '%f', ], 0, self.sinfo_f_one_host
-                )
+                ['sinfo', '%f', ], 0, self.sinfo_f_one_host
+            )
             features = fsl_sub_plugin_slurm._get_queue_features('htc')
             self.assertDictEqual(features, {'os': ['centos7', ], })
         with patch('fsl_sub_plugin_slurm.sp.run') as mock_spr:
             mock_spr.return_value = subprocess.CompletedProcess(
-                    ['sinfo', '%f', ], 0, self.sinfo_f_two_host
-                )
+                ['sinfo', '%f', ], 0, self.sinfo_f_two_host
+            )
             features = fsl_sub_plugin_slurm._get_queue_features('htc')
             self.assertDictEqual(features, {'gpu': [], 'gpu_sku': ['P100', 'V100'], })
 
