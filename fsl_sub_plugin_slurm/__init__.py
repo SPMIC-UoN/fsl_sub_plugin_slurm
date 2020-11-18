@@ -348,7 +348,7 @@ def submit(
                     constraints = [":".join((class_constraint, cpc)) for cpc in cpclasses]
                     command_args.append('='.join(
                         ('--constraint', '"{0}"'.format('|'.join(constraints)))
-                        ))
+                    ))
                 else:
                     if len(cpclasses) == 1:
                         gres_items.insert(1, cpclasses[0])
