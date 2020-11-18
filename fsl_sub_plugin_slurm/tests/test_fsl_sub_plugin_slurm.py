@@ -876,11 +876,12 @@ module load mymodule
             )
 
         mock_sprun.reset_mock()
-        with self.subTest("With set GPU mask"):
+        with self.subTest("With GPU constraints"):
             w_conf = self.config
             w_conf['method_opts']['slurm']['projects'] = True
             w_conf['method_opts']['slurm']['add_module_paths'] = ['/usr/local/shellmodules']
             w_conf['copro_opts']['cuda']['set_visible'] = True
+            w_conf['copro_opts']['cuda']['class_constraint'] = 'gpu_sku'
             self.mocks['fsl_sub_plugin_slurm.method_config'].return_value = w_conf['method_opts']['slurm']
             mock_cpconf.return_value = w_conf['copro_opts']['cuda']
             expected_cmd = ['/usr/bin/sbatch']
@@ -895,7 +896,7 @@ module load mymodule
                 '''FSLSUB_ARRAYSTEPSIZE_VAR=SLURM_ARRAY_TASK_STEP,'''
                 '''FSLSUB_ARRAYCOUNT_VAR=SLURM_ARRAY_TASK_COUNT,'''
                 '''FSLSUB_NSLOTS=SLURM_NPROCS
-#SBATCH --constraint="k80|p100"
+#SBATCH --constraint="gpu_sku:k80|gpu_sku:p100"
 #SBATCH --gres=gpu:1
 #SBATCH -o {0}.o%j
 #SBATCH -e {0}.e%j
