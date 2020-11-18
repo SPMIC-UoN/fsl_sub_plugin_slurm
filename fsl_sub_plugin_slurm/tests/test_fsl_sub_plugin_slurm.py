@@ -1430,6 +1430,9 @@ class TestQueueCapture(unittest.TestCase):
             yaml.width = 128
         expected_yaml = yaml.load('''queues:
   htc: # Queue name
+  # default: true
+  # priority: 1
+  # group: 1
     time: 1440 # Maximum job run time in minutes
     max_slots: 8 # Maximum number of threads/slots on a queue
     max_size: 64 # Maximum RAM size of a job in {0}B
@@ -1481,6 +1484,9 @@ class TestQueueCapture(unittest.TestCase):
   #     classes:
   #       - p100
   #       - v100
+  # default: true
+  # priority: 1
+  # group: 1
     time: 7200 # Maximum job run time in minutes
     max_slots: 16 # Maximum number of threads/slots on a queue
     max_size: 512 # Maximum RAM size of a job in {0}B

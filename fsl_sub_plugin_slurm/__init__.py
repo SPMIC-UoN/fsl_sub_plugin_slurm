@@ -1114,7 +1114,9 @@ def build_queue_defs():
             _add_comment(comments, '    classes:')
             for res_p in sorted(list(set(gres['gpu']))):
                 _add_comment(comments, '      - ' + res_p[0])
-            _add_comment(comments, "default: true")
+        _add_comment(comments, "default: true")
+        _add_comment(comments, 'priority: 1')
+        _add_comment(comments, 'group: 1')
 
         for w in comments:
             queues.yaml_set_comment_before_after_key(qinfo['qname'], after=w)
