@@ -94,23 +94,57 @@ class TestSlurmUtils(unittest.TestCase):
             70.1
         )
 
-    def test__add_warning(self):
-        warnings = []
-        warnings.append('A warning')
-        newwarnings = list(warnings)
-        fsl_sub_plugin_slurm._add_warning(
-            newwarnings, 'A warning'
+    def test__day_time_minutes(self):
+        self.assertEqual(
+            fsl_sub_plugin_slurm._day_time_minutes('1-00:00:00'),
+            24 * 60
+            )
+        self.assertEqual(
+            fsl_sub_plugin_slurm._day_time_minutes('1-00:01:00'),
+            24 * 60 + 1
+            )
+        self.assertEqual(
+            fsl_sub_plugin_slurm._day_time_minutes('0-00:01:00'),
+            1
+            )
+        self.assertEqual(
+            fsl_sub_plugin_slurm._day_time_minutes('0-00:00:01'),
+            1
+            )
+        self.assertEqual(
+            fsl_sub_plugin_slurm._day_time_minutes('0-01:00:00'),
+            60
+            )
+        self.assertEqual(
+            fsl_sub_plugin_slurm._day_time_minutes('0-01:01:00'),
+            60 + 1
+            )
+        self.assertEqual(
+            fsl_sub_plugin_slurm._day_time_minutes('10:00'),
+            10
+            )
+        self.assertEqual(
+            fsl_sub_plugin_slurm._day_time_minutes('10'),
+            1
+            )
+
+    def test__add_comment(self):
+        comments = []
+        comments.append('A comment')
+        newcomments = list(comments)
+        fsl_sub_plugin_slurm._add_comment(
+            newcomments, 'A comment'
         )
         self.assertListEqual(
-            warnings,
-            newwarnings
+            comments,
+            newcomments
         )
-        fsl_sub_plugin_slurm._add_warning(
-            newwarnings, 'Another warning'
+        fsl_sub_plugin_slurm._add_comment(
+            newcomments, 'Another comment'
         )
         self.assertListEqual(
-            ['A warning', 'Another warning', ],
-            newwarnings
+            ['A comment', 'Another comment', ],
+            newcomments
         )
 
 

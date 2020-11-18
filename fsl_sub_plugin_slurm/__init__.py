@@ -1024,14 +1024,14 @@ def _day_time_minutes(dayt):
         seconds = sub_day
     elif sub_day.count(':') == 1:
         (minutes, seconds) = sub_day.split(':')
-        seconds = 0
+        hours = 0
     else:
         (hours, minutes, seconds) = sub_day.split(':')
     hours = int(hours)
     minutes = int(minutes)
     seconds = int(seconds)
 
-    if seconds != 0:
+    if days == 0 and hours == 0 and minutes == 0 and seconds != 0:
         minutes += 1
     return days * (24 * 60) + hours * 60 + minutes
 
@@ -1060,7 +1060,7 @@ def build_queue_defs():
         queues[qinfo['qname']] = CommentedMap()
         qd = queues[qinfo['qname']]
         queues.yaml_add_eol_comment("Queue name", qinfo['qname'], column=0)
-        add_comment = qd.yaml_add_eol_comment
+        add_key_comment = qd.yaml_add_eol_comment
         for coproc_m in ('gpu', 'cuda', 'phi', ):
             if coproc_m in q:
                 _add_comment(
@@ -1069,18 +1069,16 @@ def build_queue_defs():
                     " Cannot auto-configure.'"
                 )
         qd['time'] = qinfo['qtime']
-        add_comment('Maximum job run time in minutes', 'time', column=0)
+        add_key_comment('Maximum job run time in minutes', 'time', column=0)
         qd['max_slots'] = qinfo['cpus']
-        add_comment("Maximum number of threads/slots on a queue", 'max_slots', column=0)
+        add_key_comment("Maximum number of threads/slots on a queue", 'max_slots', column=0)
         qd['max_size'] = qinfo['memory']
-        add_comment("Maximum RAM size of a job in " + fsl_sub.consts.RAMUNITS + 'B', 'max_size', column=0)
+        add_key_comment("Maximum RAM size of a job in " + fsl_sub.consts.RAMUNITS + 'B', 'max_size', column=0)
         qd['slot_size'] = None
-        add_comment(
+        add_key_comment(
             "Slot size is normally irrelevant on SLURM "
             "- set this to memory (in {0}B) per thread if required".format(fsl_sub.consts.RAMUNITS),
             'slot_size')
-        add_comment('    priority: 1')
-        add_comment('    group: 1')
         if 'gpu' in gres.keys():
 
             _add_comment(
