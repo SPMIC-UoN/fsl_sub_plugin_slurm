@@ -459,7 +459,12 @@ def submit(
             '='.join((
                 '--job-name', job_name, ))
         )
-
+        # Set current working directory
+        command_args.append(
+            '='.join((
+                '--chdir', os.getcwd()
+            ))
+        )
         hlist = []
         for q in queues:
             if '@' in q:
