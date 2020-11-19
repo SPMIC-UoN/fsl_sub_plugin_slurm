@@ -1107,14 +1107,16 @@ def build_queue_defs():
                         )
             qty = max([q[1] for q in gres['gpu']])
             _add_comment(comments, 'copros:')
-            _add_comment(comments, '  cuda:')
-            _add_comment(comments, '    max_quantity: ' + str(qty))
-            _add_comment(comments, '    classes:')
+            _add_comment(comments, '  cuda: # CUDA Co-processor available')
+            _add_comment(comments, '    max_quantity: ' + str(qty) + ' # Maximum available per node')
+            _add_comment(comments, '    classes: # List of classes (if classes supported)')
             for res_p in sorted(list(set(gres['gpu']))):
                 _add_comment(comments, '      - ' + res_p[0])
-        _add_comment(comments, "default: true")
-        _add_comment(comments, 'priority: 1')
-        _add_comment(comments, 'group: 1')
+            _add_comment(comments, '    exclusive: False # Does this only run jobs requiring this co-processor?')
+
+        _add_comment(comments, "default: true # Is this the default partition?")
+        _add_comment(comments, 'priority: 1 # Priority in group - higher wins')
+        _add_comment(comments, 'group: 1 # Group partitions with the same integer then order by priority')
 
         for w in comments:
             queues.yaml_set_comment_before_after_key(qinfo['qname'], after=w)

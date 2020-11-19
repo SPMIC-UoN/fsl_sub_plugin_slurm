@@ -96,6 +96,10 @@ This will return details for every node within that partition. The queue definit
 | group | integer | (Optional) All partitions with the same group number will be considered together when scheduling, typically this would be all queues with the same run time but differing memory/core counts. |
 | priority | integer | (Optional) Priority within a group - higher wins. |
 | default | True | Is this the default queue when no time/RAM details provided. |
+| copros | _Co-processor dictionary_ | _Optional_ If this queue has hosts with co-processors (e.g. CUDA devices), then provide this entry, with a key identical to the associated co-processor definition, e.g. _cuda_. |
+| | max\_quantity | An integer representing the maximum number of this coprocessor type available on a single compute node. This can be obtained by looking at the _complexes_ entry of `qconf -se <hostname>` for all of the hosts in this queue. If the complex is _gpu_ then an entry of _gpu=2_ would indicated that this value should be set to 2.
+| | classes | A list of coprocessor classes (as defined in the coprocessor configuration section) that this queue has hardware for.
+| | exclusive | True/**False** | Whether this queue is only used for co-processor requiring tasks. |
 
 Where a partition has obvious GRES or features that define GPUs a proposed GPU configuration will be added as comments to the start of the queue definition. You should review this, create/update the coproc_opts>cuda record with the information in the comments and then this section can be uncommented to enable GPU support.
 

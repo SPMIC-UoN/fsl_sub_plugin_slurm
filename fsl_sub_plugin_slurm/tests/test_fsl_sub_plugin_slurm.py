@@ -1465,9 +1465,9 @@ class TestQueueCapture(unittest.TestCase):
             yaml.width = 128
         expected_yaml = yaml.load('''queues:
   htc: # Queue name
-  # default: true
-  # priority: 1
-  # group: 1
+  # default: true # Is this the default partition?
+  # priority: 1 # Priority in group - higher wins
+  # group: 1 # Group partitions with the same integer then order by priority
     time: 1440 # Maximum job run time in minutes
     max_slots: 8 # Maximum number of threads/slots on a queue
     max_size: 64 # Maximum RAM size of a job in {0}B
@@ -1514,14 +1514,15 @@ class TestQueueCapture(unittest.TestCase):
   # If using constraints the coproc: cuda 'resource' could be gpu_sku and associated '''
                 '''class 'resource's would be P100,V100
   # copros:
-  #   cuda:
-  #     max_quantity: 8
-  #     classes:
+  #   cuda: # CUDA Co-processor available
+  #     max_quantity: 8 # Maximum available per node
+  #     classes: # List of classes (if classes supported)
   #       - p100
   #       - v100
-  # default: true
-  # priority: 1
-  # group: 1
+  #     exclusive: False # Does this only run jobs requiring this co-processor?
+  # default: true # Is this the default partition?
+  # priority: 1 # Priority in group - higher wins
+  # group: 1 # Group partitions with the same integer then order by priority
     time: 7200 # Maximum job run time in minutes
     max_slots: 16 # Maximum number of threads/slots on a queue
     max_size: 512 # Maximum RAM size of a job in {0}B
