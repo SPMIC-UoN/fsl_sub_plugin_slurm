@@ -631,29 +631,16 @@ def job_status(job_id, sub_job_id=None):
     details holds a dict with following info:
         id
         name
-        script (if available)
-        args (if available)
-        # sub_state: fsl_sub.consts.NORMAL|RESTARTED|SUSPENDED
         sub_time
         tasks (dict keyed on sub-task ID):
             status:
                 fsl_sub.consts.QUEUED
                 fsl_sub.consts.RUNNING
                 fsl_sub.consts.FINISHED
-                fsl_sub.consts.FAILEDNQUEUED
+                fsl_sub.consts.FAILED
                 fsl_sub.consts.HELD
             start_time
             end_time
-            sub_time
-            wall
-            cpu
-            exit_status
-            error_message
-            maxmemory (in Mbytes)
-        parents (if available)
-        children (if available)
-        job_directory (if available)
-
         '''
 
     # Look for running jobs
