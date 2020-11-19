@@ -710,17 +710,14 @@ def _get_sacct(job_id, sub_job_id=None):
     for line in output.splitlines():
         fields = line.split('|')
         stage = ''
+        if '.' in fields[0]:
+            continue
         if '_' in fields[0]:
             # An array task
             jid, sjid = fields[0].split('_')
-            jid = int(jid)
-            if '.batch' in sjid:
-                sjid, stage = sjid.split('.')
             jid, sjid = (int(jid), int(sjid))
         else:
             jid, sjid = fields[0], 1
-            if '.batch' in jid:
-                jid, stage = jid.split('.')
             jid, sjid = (int(jid), int(sjid))
 
         job['id'] = jid
