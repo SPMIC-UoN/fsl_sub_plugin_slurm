@@ -731,7 +731,7 @@ def _get_sacct(job_id, sub_job_id=None):
         if exit_status != 0:
             task['status'] = fsl_sub.consts.FAILED
         else:
-            status = fields[7]
+            status = fields[5]
             if status == 'REQUEUED':
                 task['status'] = fsl_sub.consts.REQUEUED
             elif status == 'SUSPENDED':
