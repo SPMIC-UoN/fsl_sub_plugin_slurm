@@ -709,7 +709,6 @@ def _get_sacct(job_id, sub_job_id=None):
     job = {}
     for line in output.splitlines():
         fields = line.split('|')
-        stage = ''
         if '.' in fields[0]:
             continue
         if '_' in fields[0]:
@@ -747,9 +746,8 @@ def _get_sacct(job_id, sub_job_id=None):
         task['start_time'] = _sacct_datetimestamp(fields[3])
         task['end_time'] = _sacct_datetimestamp(fields[4])
 
-        if stage == '':
-            job['sub_time'] = _sacct_datetimestamp(fields[2])
-            job['name'] = fields[1]
+        job['sub_time'] = _sacct_datetimestamp(fields[2])
+        job['name'] = fields[1]
 
     return job
 
