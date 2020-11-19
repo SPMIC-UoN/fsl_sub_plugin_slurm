@@ -707,6 +707,8 @@ def _get_sacct(job_id, sub_job_id=None):
         raise UnknownJobId
 
     job = {}
+    job['tasks'] = {}
+
     for line in output.splitlines():
         fields = line.split('|')
         if '.' in fields[0]:
@@ -720,7 +722,6 @@ def _get_sacct(job_id, sub_job_id=None):
             jid, sjid = (int(jid), int(sjid))
 
         job['id'] = jid
-        job['tasks'] = {}
 
         if sjid not in job['tasks']:
             job['tasks'][sjid] = {}
