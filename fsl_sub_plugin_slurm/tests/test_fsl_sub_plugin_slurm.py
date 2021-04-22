@@ -1375,6 +1375,8 @@ class TestQueueCapture(unittest.TestCase):
         self.sinfo_G_list = 'gpu:p100:2(S:0-1),gpu:v100:2(S:0-1)'
         self.sinfo_O_one_host = '''8                  UNLIMITED           64000             1-00:00:00          htc-node1
 '''
+        self.sinfo_O_one_host_inf = '''8                  UNLIMITED           64000             infinite          htc-node1
+'''
         self.sinfo_O_two_host = '''8                   UNLIMITED           384000               1-00:00:00          htc-gpu1
 16                 UNLIMITED           512000               5-00:00:00          htc-gpu2
 '''
@@ -1426,6 +1428,35 @@ class TestQueueCapture(unittest.TestCase):
                 )
                 gres = fsl_sub_plugin_slurm._get_queue_gres('htc')
                 self.assertDictEqual(gres, {'gpu': [('p100', 4, ), ('v100', 8, ), ], })
+
+    @patch('fsl_sub_plugin_slurm._sinfo_cmd', return_value='/usr/bin/sinfo')
+    def test__get_queue_info(self, mock_sinfo):
+        with patch('fsl_sub_plugin_slurm.sp.run') as mock_spr:
+            mock_spr.return_value = subprocess.CompletedProcess(
+                ['sinfo', '%f', ], 0, self.sinfo_O_one_host
+            )
+            (qdef, comments) = fsl_sub_plugin_slurm._get_queue_info('htc')
+            self.assertDictEqual(
+                qdef,
+                {
+                    'cpus': 8,
+                    'memory': 64,
+                    'qname': 'htc',
+                    'qtime': 1440,
+                })
+        with patch('fsl_sub_plugin_slurm.sp.run') as mock_spr:
+            mock_spr.return_value = subprocess.CompletedProcess(
+                ['sinfo', '%f', ], 0, self.sinfo_O_one_host_inf
+            )
+            (qdef, comments) = fsl_sub_plugin_slurm._get_queue_info('htc')
+            self.assertDictEqual(
+                qdef,
+                {
+                    'cpus': 8,
+                    'memory': 64,
+                    'qname': 'htc',
+                    'qtime': 527039,
+                })
 
     @patch('fsl_sub_plugin_slurm._sinfo_cmd', return_value='/usr/bin/sinfo')
     def test__get_queue_features(self, mock_sinfo):
