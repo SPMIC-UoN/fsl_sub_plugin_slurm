@@ -1234,7 +1234,7 @@ class TestJobStatus(unittest.TestCase):
 
         self.sacct_finished_out = (
             '''123456|myjob|2017-10-16T05:28:38|2017-10-16T05:29:24|2017-10-16T06:25:45|'''
-            '''54096|00:56:21|COMPLETED|0:0|''')
+            '''COMPLETED|0:0|''')
         self.sacct_finished_job = {
             'id': 123456,
             'name': 'myjob',
@@ -1274,9 +1274,9 @@ class TestJobStatus(unittest.TestCase):
 
         self.slurm_example_sacct = (
             '''1716106|acctest|2018-06-05T09:42:24|2018-06-05T09:42:24|'''
-            '''2018-06-05T09:44:08|00:00:00|00:00.004|COMPLETED|0:0|
+            '''2018-06-05T09:44:08|COMPLETED|0:0
 1716106.batch|batch|2018-06-05T09:42:24|2018-06-05T09:42:24|'''
-            '''2018-06-05T09:44:08|00:00:00|00:00.004|COMPLETED|0:0|202.15M
+            '''2018-06-05T09:44:08|COMPLETED|0:0
 ''')
 
     @patch('fsl_sub_plugin_slurm._sacct_cmd', return_value='/usr/bin/sacct')
