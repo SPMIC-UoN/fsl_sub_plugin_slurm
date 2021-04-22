@@ -371,16 +371,16 @@ def submit(
             command_args.append(['-e', logdir, ])
         else:
             logs = {}
-            for l in ['o', 'e', ]:
+            for lf in ['o', 'e', ]:
                 if array_task:
                     logtemplate = '{0}.{1}%A.%a'
                 else:
                     logtemplate = '{0}.{1}%j'
-                logs[l] = os.path.join(
+                logs[lf] = os.path.join(
                     logdir,
                     logtemplate.format(
                         job_name.replace(' ', '_'),
-                        l)
+                        lf)
                 )
             command_args.append(['-o', logs['o'], ])
             command_args.append(['-e', logs['e'], ])
