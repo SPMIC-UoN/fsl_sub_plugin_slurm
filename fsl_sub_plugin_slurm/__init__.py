@@ -955,7 +955,7 @@ def _get_queue_info(queue, sinfo=None):
         memory = int(memory)
         if not mconfig['memory_in_gb']:
             memory = memory // 1000  # Memory reported in MB
-        if qtime == "UNLIMITED":
+        if qtime == "infinite":
             qtime = "365-23:59:59"
         qtime = _day_time_minutes(qtime)
         qvariants.append((cpus, memory, qtime, ))
