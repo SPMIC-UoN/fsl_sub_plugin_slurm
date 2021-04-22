@@ -284,8 +284,8 @@ class TestSubmit(unittest.TestCase):
     plugin = fsl_sub_plugin_slurm
 
     def w_wrapper(self, content):
-        for l in content:
-            self.ww.write(l + '\n')
+        for lf in content:
+            self.ww.write(lf + '\n')
         return self.ww.name
 
     def test_empty_submit(
@@ -324,6 +324,7 @@ class TestSubmit(unittest.TestCase):
 #SBATCH -o {0}.o%j
 #SBATCH -e {0}.e%j
 #SBATCH --job-name={1}
+#SBATCH --chdir={5}
 #SBATCH -p {2}
 #SBATCH --parsable
 #SBATCH --requeue
@@ -336,7 +337,8 @@ module load mymodule
 '''.format(
                     os.path.join(logdir, job_name),
                     job_name, queue, ' '.join(cmd),
-                    self.now.strftime("%H:%M:%S %d/%m/%Y"))
+                    self.now.strftime("%H:%M:%S %d/%m/%Y"),
+                    logdir)
             )
             mock_sprun.return_value = subprocess.CompletedProcess(
                 expected_cmd, 0,
@@ -384,6 +386,7 @@ module load mymodule
 #SBATCH -o {0}.o%j
 #SBATCH -e {0}.e%j
 #SBATCH --job-name={1}
+#SBATCH --chdir={7}
 #SBATCH -p {2}
 #SBATCH -w {5}
 #SBATCH --parsable
@@ -399,7 +402,8 @@ module load mymodule
                     job_name, 'a.q', ' '.join(cmd),
                     self.now.strftime("%H:%M:%S %d/%m/%Y"),
                     'host1',
-                    queue)
+                    queue,
+                    logdir)
             )
             mock_sprun.return_value = subprocess.CompletedProcess(
                 expected_cmd, 0,
@@ -447,6 +451,7 @@ module load mymodule
 #SBATCH -o {0}.o%j
 #SBATCH -e {0}.e%j
 #SBATCH --job-name={1}
+#SBATCH --chdir={5}
 #SBATCH -p {2}
 #SBATCH --parsable
 #SBATCH --requeue
@@ -460,6 +465,7 @@ module load mymodule
                     os.path.join(logdir, job_name),
                     job_name, ','.join(queue), ' '.join(cmd),
                     self.now.strftime("%H:%M:%S %d/%m/%Y"),
+                    logdir
                 )
             )
             mock_sprun.return_value = subprocess.CompletedProcess(
@@ -508,25 +514,26 @@ module load mymodule
 #SBATCH -o {0}.o%j
 #SBATCH -e {0}.e%j
 #SBATCH --job-name={1}
-#SBATCH -p {6}
-#SBATCH -w {5}
+#SBATCH --chdir={7}
+#SBATCH -p {5}
+#SBATCH -w {4}
 #SBATCH --parsable
 #SBATCH --requeue
 module load mymodule
 # Built by fsl_sub v.1.0.0 and fsl_sub_plugin_slurm v.2.0.0
-# Command line: fsl_sub -q {7} {3}
-# Submission time (H:M:S DD/MM/YYYY): {4}
+# Command line: fsl_sub -q {6} {2}
+# Submission time (H:M:S DD/MM/YYYY): {3}
 
-{3}
+{2}
 '''.format(
                     os.path.join(logdir, job_name),
                     job_name,
-                    ','.join([q.split('@')[0] for q in queue]),
                     ' '.join(cmd),
                     self.now.strftime("%H:%M:%S %d/%m/%Y"),
                     'host1',
                     'a.q,b.q',
-                    ','.join(queue)
+                    ','.join(queue),
+                    logdir
                 )
             )
             mock_sprun.return_value = subprocess.CompletedProcess(
@@ -575,6 +582,7 @@ module load mymodule
 #SBATCH -o {0}.o%j
 #SBATCH -e {0}.e%j
 #SBATCH --job-name={1}
+#SBATCH --chdir={7}
 #SBATCH -p {2}
 #SBATCH -w {5}
 #SBATCH --parsable
@@ -591,7 +599,8 @@ module load mymodule
                     ' '.join(cmd),
                     self.now.strftime("%H:%M:%S %d/%m/%Y"),
                     'host1,host2',
-                    ','.join(queue)
+                    ','.join(queue),
+                    logdir
                 )
             )
             mock_sprun.return_value = subprocess.CompletedProcess(
@@ -644,6 +653,7 @@ module load mymodule
 #SBATCH -o {0}.o%j
 #SBATCH -e {0}.e%j
 #SBATCH --job-name={1}
+#SBATCH --chdir={5}
 #SBATCH -p {2}
 #SBATCH --parsable
 #SBATCH --requeue
@@ -656,7 +666,9 @@ module load mymodule
 '''.format(
                     os.path.join(logdir, job_name),
                     job_name, queue, ' '.join(cmd),
-                    self.now.strftime("%H:%M:%S %d/%m/%Y"))
+                    self.now.strftime("%H:%M:%S %d/%m/%Y"),
+                    logdir
+                )
             )
             mock_sprun.return_value = subprocess.CompletedProcess(
                 expected_cmd, 0,
@@ -695,6 +707,7 @@ module load mymodule
 #SBATCH -o {0}.o%j
 #SBATCH -e {0}.e%j
 #SBATCH --job-name={1}
+#SBATCH --chdir={6}
 #SBATCH -p {2}
 #SBATCH --parsable
 #SBATCH --requeue
@@ -708,7 +721,8 @@ module load mymodule
 '''.format(
                     os.path.join(logdir, job_name),
                     job_name, queue, project, ' '.join(cmd),
-                    self.now.strftime("%H:%M:%S %d/%m/%Y"))
+                    self.now.strftime("%H:%M:%S %d/%m/%Y"),
+                    logdir)
             )
             mock_sprun.return_value = subprocess.CompletedProcess(
                 expected_cmd, 0,
@@ -751,6 +765,7 @@ module load mymodule
 #SBATCH -o {0}.o%j
 #SBATCH -e {0}.e%j
 #SBATCH --job-name={1}
+#SBATCH --chdir={6}
 #SBATCH -p {2}
 #SBATCH --parsable
 #SBATCH --requeue
@@ -765,7 +780,8 @@ module load mymodule
 '''.format(
                     os.path.join(logdir, job_name),
                     job_name, queue, project, ' '.join(cmd),
-                    self.now.strftime("%H:%M:%S %d/%m/%Y"))
+                    self.now.strftime("%H:%M:%S %d/%m/%Y"),
+                    logdir)
             )
             mock_sprun.return_value = subprocess.CompletedProcess(
                 expected_cmd, 0,
@@ -812,6 +828,7 @@ module load mymodule
 #SBATCH -o {0}.o%j
 #SBATCH -e {0}.e%j
 #SBATCH --job-name={1}
+#SBATCH --chdir={6}
 #SBATCH -p {2}
 #SBATCH --parsable
 #SBATCH --requeue
@@ -826,7 +843,8 @@ module load mymodule
 '''.format(
                     os.path.join(logdir, job_name),
                     job_name, queue, project, ' '.join(cmd),
-                    self.now.strftime("%H:%M:%S %d/%m/%Y"))
+                    self.now.strftime("%H:%M:%S %d/%m/%Y"),
+                    logdir)
             )
             mock_sprun.return_value = subprocess.CompletedProcess(
                 expected_cmd, 0,
@@ -873,6 +891,7 @@ module load mymodule
 #SBATCH -o {0}.o%j
 #SBATCH -e {0}.e%j
 #SBATCH --job-name={1}
+#SBATCH --chdir={6}
 #SBATCH -p {2}
 #SBATCH --parsable
 #SBATCH --requeue
@@ -887,7 +906,8 @@ module load mymodule
 '''.format(
                     os.path.join(logdir, job_name),
                     job_name, queue, project, ' '.join(cmd),
-                    self.now.strftime("%H:%M:%S %d/%m/%Y"))
+                    self.now.strftime("%H:%M:%S %d/%m/%Y"),
+                    logdir)
             )
             mock_sprun.return_value = subprocess.CompletedProcess(
                 expected_cmd, 0,
@@ -935,6 +955,7 @@ module load mymodule
 #SBATCH -o {0}.o%j
 #SBATCH -e {0}.e%j
 #SBATCH --job-name={1}
+#SBATCH --chdir={6}
 #SBATCH -p {2}
 #SBATCH --parsable
 #SBATCH --requeue
@@ -949,7 +970,8 @@ module load mymodule
 '''.format(
                     os.path.join(logdir, job_name),
                     job_name, queue, project, ' '.join(cmd),
-                    self.now.strftime("%H:%M:%S %d/%m/%Y"))
+                    self.now.strftime("%H:%M:%S %d/%m/%Y"),
+                    logdir)
             )
             mock_sprun.return_value = subprocess.CompletedProcess(
                 expected_cmd, 0,
@@ -1001,6 +1023,7 @@ FSLSUB_NSLOTS=SLURM_NPROCS
 #SBATCH -o {1}.o%j
 #SBATCH -e {1}.e%j
 #SBATCH --job-name={2}
+#SBATCH --chdir={6}
 #SBATCH -p {3}
 #SBATCH --parsable
 #SBATCH --requeue
@@ -1015,7 +1038,8 @@ module load mymodule
                 os.path.join(logdir, job_name),
                 job_name,
                 queue, ' '.join(cmd),
-                self.now.strftime("%H:%M:%S %d/%m/%Y"))
+                self.now.strftime("%H:%M:%S %d/%m/%Y"),
+                logdir)
         )
         mock_sprun.return_value = subprocess.CompletedProcess(
             expected_cmd, 0,
@@ -1068,6 +1092,7 @@ FSLSUB_NSLOTS=SLURM_NPROCS
 #SBATCH -o {1}.o%j
 #SBATCH -e {1}.e%j
 #SBATCH --job-name={2}
+#SBATCH --chdir={6}
 #SBATCH -p {3}
 #SBATCH --parsable
 #SBATCH --requeue
@@ -1082,7 +1107,8 @@ module load mymodule
                 os.path.join(logdir, job_name),
                 job_name,
                 queue, ' '.join(cmd),
-                self.now.strftime("%H:%M:%S %d/%m/%Y"))
+                self.now.strftime("%H:%M:%S %d/%m/%Y"),
+                logdir)
         )
         mock_sprun.return_value = subprocess.CompletedProcess(
             expected_cmd, 0,
@@ -1136,6 +1162,7 @@ module load mymodule
             '#SBATCH -o {0}.o%j'.format(os.path.join(logdir, job_name)),
             '#SBATCH -e {0}.e%j'.format(os.path.join(logdir, job_name)),
             '#SBATCH --job-name=' + job_name,
+            '#SBATCH --chdir=' + logdir,
             '#SBATCH -p ' + queue,
             '#SBATCH --parsable',
             '#SBATCH --requeue',
@@ -1328,7 +1355,6 @@ class TestJobStatus(unittest.TestCase):
                         }
                     }
                 )
-
         with self.subTest("Completed"):
             with patch('fsl_sub_plugin_slurm.sp.run', autospec=True) as mock_sprun:
                 mock_sprun.return_value = subprocess.CompletedProcess(
