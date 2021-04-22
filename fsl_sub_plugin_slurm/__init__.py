@@ -407,7 +407,7 @@ def submit(
             command_args.append(
                 "=".join(
                     (
-                        '--dependancy',
+                        '--dependency',
                         hold_state + ':' + parents)
                 )
             )
