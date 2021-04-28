@@ -537,7 +537,7 @@ def submit(
     if array_task and not array_specifier:
         extra_lines.extend([
             '',
-            'the_command=$(sed -n -e "${{SLURM_ARRAY_TASK_ID}}p" {0})'.format(command),
+            'the_command=$(sed -n -e "${{SLURM_ARRAY_TASK_ID}}p" {0})'.format(command[0]),
             '',
         ])
         command = ['exec', bash, '-c', '"$the_command"', ]
