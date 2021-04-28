@@ -1,5 +1,9 @@
 # fsl_sub_plugin_slurm release history
 
+## 1.3.5
+
+* Fixed array task wrapper generation
+
 ## 1.3.4
 
 * Fixed queue capture when queue has infinite duration
