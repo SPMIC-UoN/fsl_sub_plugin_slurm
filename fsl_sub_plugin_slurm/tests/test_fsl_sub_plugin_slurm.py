@@ -248,13 +248,13 @@ class TestSubmit(unittest.TestCase):
         self.now = datetime.datetime.now()
         self.strftime = datetime.datetime.strftime
         self.bash = '/bin/bash'
+        os.environ['FSLSUB_SHELL'] = self.bash
         self.config = copy.deepcopy(conf_dict)
         self.mconfig = self.config['method_opts']['slurm']
         self.patch_objects = {
             'fsl_sub.utils.datetime': {'autospec': True, },
             'fsl_sub_plugin_slurm.plugin_version': {'autospec': True, 'return_value': '2.0.0', },
             'fsl_sub_plugin_slurm.loaded_modules': {'autospec': True, 'return_value': ['mymodule', ], },
-            'fsl_sub_plugin_slurm.bash_cmd': {'autospec': True, 'return_value': self.bash, },
             'fsl_sub_plugin_slurm.write_wrapper': {'autospec': True, 'side_effect': self.w_wrapper},
             'fsl_sub_plugin_slurm.method_config': {'autospec': True, 'return_value': self.mconfig, },
         }
