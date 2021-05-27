@@ -1,7 +1,7 @@
 # fsl_sub_plugin_slurm
 
 Job submission to SLURM variant cluster queues.
-_Copyright 2018-2020, University of Oxford (Duncan Mortimer)_
+_Copyright 2018-2021, University of Oxford (Duncan Mortimer)_
 
 ## Introduction
 
