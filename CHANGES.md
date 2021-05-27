@@ -1,5 +1,9 @@
 # fsl_sub_plugin_slurm release history
 
+## 1.3.6
+
+* Changes to tests for latest fsl_sub version
+
 ## 1.3.5
 
 * Fixed array task wrapper generation
