@@ -1,5 +1,9 @@
 # fsl_sub_plugin_slurm release history
 
+## 1.3.7
+
+* Support environment variables that have an '=' in their value
+
 ## 1.3.6
 
 * Changes to tests for latest fsl_sub version

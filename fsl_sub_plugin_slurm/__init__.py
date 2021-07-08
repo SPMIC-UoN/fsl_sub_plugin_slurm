@@ -291,7 +291,7 @@ def submit(
         if my_export_vars:
             for var in my_export_vars:
                 if '=' in var:
-                    vname, vvalue = var.split('=')
+                    vname, vvalue = var.split('=', 1)
                     # Check if there is a comma or space in the env-var value, if so add it to my_complex_vars
                     if any(x in vvalue for x in [',', ' ']):
 
