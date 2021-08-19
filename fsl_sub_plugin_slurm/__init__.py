@@ -896,7 +896,7 @@ def _get_queue_gres(queue, sinfo=None):
             fields = sub_g.split(':')
             if len(fields) == 2:
                 # name:number
-                gres[fields[0]].append(_get_gres_count(fields[1]))
+                gres[fields[0]].append(('-', _get_gres_count(fields[1])))
             elif len(fields) == 4:
                 # name:type:'no_consume',number
                 gres[fields[0]].append((fields[1], _get_gres_count(fields[3])))
@@ -1075,16 +1075,10 @@ def build_queue_defs():
                 " see below for possible configuration")
             _add_comment(
                 comments,
-                "coproc: cuda 'resource' would be 'gpu' and associated class resources (- if none):quantities would be:")
+                "coproc: cuda 'resource' would be 'gpu' and associated class resources ('-' if none):quantities would be:")
             for res_p in gres['gpu']:
-                if isinstance(res_p, tuple):
-                    _add_comment(
-                        comments, ":".join(str(res_p[0], str(res_p[1]))))
-                else:
-                    _add_comment(
-                        comments, str(res_p)
-                    )
-
+                _add_comment(
+                    comments, ":".join((str(res_p[0]), str(res_p[1]))))
             gpu_matches = [(k, v) for k, v in features.items() if 'gpu' in k]
             if gpu_matches:
                 _add_comment(
