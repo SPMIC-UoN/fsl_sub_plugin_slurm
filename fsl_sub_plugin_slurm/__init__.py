@@ -1073,19 +1073,18 @@ def build_queue_defs():
                 comments,
                 "Partion has a GRES 'gpu' that might indicate the presence of GPUs,"
                 " see below for possible configuration")
-            if len(gres['gpu']) == 1:
-                _add_comment(
-                    comments,
-                    "coproc: cuda 'resource' would be 'gpu' with no classes and "
-                    "associated quantity would be " + str(gres['gpu'])
-                )
-            else:
-                _add_comment(
-                    comments,
-                    "coproc: cuda 'resource' would be 'gpu' and associated class resources:quantities would be:")
-                for res_p in gres['gpu']:
+            _add_comment(
+                comments,
+                "coproc: cuda 'resource' would be 'gpu' and associated class resources (- if none):quantities would be:")
+            for res_p in gres['gpu']:
+                if isinstance(res_p, tuple):
                     _add_comment(
                         comments, ":".join(str(res_p[0], str(res_p[1]))))
+                else:
+                    _add_comment(
+                        comments, str(res_p)
+                    )
+
             gpu_matches = [(k, v) for k, v in features.items() if 'gpu' in k]
             if gpu_matches:
                 _add_comment(
