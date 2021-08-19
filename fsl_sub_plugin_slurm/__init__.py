@@ -1075,7 +1075,8 @@ def build_queue_defs():
                 " see below for possible configuration")
             _add_comment(
                 comments,
-                "coproc: cuda 'resource' would be 'gpu' and associated class resources ('-' if none):quantities would be:")
+                "coproc: cuda 'resource' would be 'gpu' and associated class "
+                "resources ('-' if none):quantities would be:")
             for res_p in gres['gpu']:
                 _add_comment(
                     comments, ":".join((str(res_p[0]), str(res_p[1]))))
