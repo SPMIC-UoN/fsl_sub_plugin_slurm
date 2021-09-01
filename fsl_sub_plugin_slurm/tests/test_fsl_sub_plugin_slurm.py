@@ -1417,7 +1417,7 @@ class TestQueueCapture(unittest.TestCase):
                 gres = fsl_sub_plugin_slurm._get_queue_gres('htc')
                 self.assertDictEqual(
                     gres,
-                    {'gpu': [2]})
+                    {'gpu': [('-', 2)]})
             with self.subTest("Multiplier"):
                 mock_spr.return_value = subprocess.CompletedProcess(
                     ['sinfo', '%G', ], 0, self.sinfo_G_multiplier
@@ -1425,7 +1425,7 @@ class TestQueueCapture(unittest.TestCase):
                 gres = fsl_sub_plugin_slurm._get_queue_gres('htc')
                 self.assertDictEqual(
                     gres,
-                    {'gpu': [2048]})
+                    {'gpu': [('-', 2048)]})
             with self.subTest("No Parens"):
                 mock_spr.return_value = subprocess.CompletedProcess(
                     ['sinfo', '%G', ], 0, self.sinfo_G_no_parens
@@ -1564,7 +1564,7 @@ class TestQueueCapture(unittest.TestCase):
   # Partition contains nodes with different amounts of memory, consider switching on RAM nofitication
   # Partition contains nodes with differing maximum run times, consider switching on time notification
   # Partion has a GRES 'gpu' that might indicate the presence of GPUs, see below for possible configuration
-  # coproc: cuda 'resource' would be 'gpu' and associated class resources:quantities would be:
+  # coproc: cuda 'resource' would be 'gpu' and associated class resources ('-' if none):quantities would be:
   # p100:4
   # v100:8
   # Partition has features that look like GPU resources, these might be usable as constraints
