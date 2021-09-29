@@ -6,7 +6,7 @@ import os
 import subprocess as sp
 from collections import defaultdict
 from ruamel.yaml.comments import CommentedMap
-from shutil import which
+from shutil import which, move
 
 from fsl_sub.exceptions import (
     BadSubmission,
@@ -598,7 +598,7 @@ def submit(
         )
         try:
             logger.debug("Renaming wrapper to " + new_name)
-            os.rename(
+            move(
                 wrapper_name,
                 new_name
             )
