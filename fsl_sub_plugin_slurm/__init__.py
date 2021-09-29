@@ -17,6 +17,7 @@ from fsl_sub.exceptions import (
 from fsl_sub.config import (
     method_config,
     coprocessor_config,
+    read_config,
 )
 import fsl_sub.consts
 from fsl_sub.coprocessors import (
@@ -481,6 +482,14 @@ def submit(
 
         if project is not None:
             command_args.append('--account ' + project)
+
+        queue_config = read_config()["queues"].get(queue, None)
+        if queue_config is not None and queue_config.get("qos", None):
+            command_args.append(
+                '='.join((
+                    '--qos', queue_config["qos"]
+                ))
+            )
 
         if array_task:
             # Submit array task file
