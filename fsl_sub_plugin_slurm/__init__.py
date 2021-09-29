@@ -871,6 +871,8 @@ def _get_queue_features(queue, sinfo=None):
 
 
 def _get_queue_gres(queue, sinfo=None):
+    logger = _get_logger()
+
     if sinfo is None:
         sinfo = _sinfo_cmd()
 
@@ -888,21 +890,26 @@ def _get_queue_gres(queue, sinfo=None):
         raise BadSubmission(
             "Queue {0} not found!".format(queue))
     for gres_line in result.stdout.splitlines():
-        if gres_line == '(null)':
-            continue
         for sub_g in gres_line.split(','):
-            if '(' in gres_line:
+            # The output of this is hard to parse and I can't find it
+            # documented anywhere. This is a best effort!
+            sub_g = sub_g.replace('(null)', '')
+            if '(' in sub_g:
+                # Strip off extra info from last field which should be number
                 sub_g, _ = sub_g.split('(')
             fields = sub_g.split(':')
             if len(fields) == 2:
                 # name:number
                 gres[fields[0]].append(('-', _get_gres_count(fields[1])))
-            elif len(fields) == 4:
-                # name:type:'no_consume',number
-                gres[fields[0]].append((fields[1], _get_gres_count(fields[3])))
-            else:
+            elif len(fields) == 3:
                 # name:type:number
                 gres[fields[0]].append((fields[1], _get_gres_count(fields[2])))
+            elif len(fields) == 4:
+                # name:type:'no_consume':number
+                gres[fields[0]].append((fields[1], _get_gres_count(fields[3])))
+            else:
+                # Not recognized - ignore
+                logger.warn("Unrecognized GRES field: %s (full: %s)", sub_g, gres_line)
     return gres
 
 
@@ -1041,7 +1048,7 @@ def build_queue_defs():
     q_base = CommentedMap()
     q_base['queues'] = CommentedMap()
     queues = q_base['queues']
-    for q in queue_list:
+    for q in sorted(queue_list):
         qinfo, comments = _get_queue_info(q)
         gres = _get_queue_gres(q)
         features = _get_queue_features(q)
