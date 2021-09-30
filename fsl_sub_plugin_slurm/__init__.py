@@ -216,6 +216,8 @@ def submit(
     '''
 
     logger = _get_logger()
+    # We may need additional SLURM-specific queue configuration options
+    queue_config = read_config()["queues"].get(queue, None)
 
     if command is None:
         raise BadSubmission(
@@ -420,6 +422,10 @@ def submit(
             else:
                 array_limit_modifier = ""
 
+        if not jobram:
+            # Allow the queue to configure a default memory request
+            jobram = queue_config.get("default_size", None)
+
         if jobram:
             # Slurm defaults to dividing up the task into multiple cpu
             # requests, automatically reducing memory per cpu value.
@@ -483,7 +489,6 @@ def submit(
         if project is not None:
             command_args.append('--account ' + project)
 
-        queue_config = read_config()["queues"].get(queue, None)
         if queue_config is not None and queue_config.get("qos", None):
             command_args.append(
                 '='.join((
